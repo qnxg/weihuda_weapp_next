@@ -1,0 +1,60 @@
+:root {
+  --brand-minus-2: #fcebea;
+  --brand-minus-1: #eab3b1;
+  --brand: #c13432;
+  --brand-plus-1: #972826;
+  --brand-plus-2: #6f1d1c;
+  --brand-dark: var(--brand-plus-1);
+  --brand-soft: var(--brand-minus-2);
+  --brand-state: rgb(193 52 50 / 10%);
+  --canvas: #f7f8fa;
+  --surface: #ffffff;
+  --surface-subtle: #f8f9fb;
+  --ink: #25272b;
+  --muted: #6b7078;
+  --line: #e8eaee;
+  --line-strong: #cfd3da;
+  --success-minus-2: #eaf4ef;
+  --success-minus-1: #acccbc;
+  --success: #367356;
+  --success-plus-1: #285a43;
+  --success-plus-2: #193e2d;
+  --success-soft: var(--success-minus-2);
+  --warning-minus-2: #fff4e2;
+  --warning-minus-1: #e7c58f;
+  --warning: #946017;
+  --warning-plus-1: #71470e;
+  --warning-plus-2: #4d3008;
+  --warning-soft: var(--warning-minus-2);
+  --info: #246b8e;
+  --info-soft: #eef6f9;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --elevation-1:
+    0 1px 2px rgb(25 30 38 / 7%),
+    0 1px 4px rgb(25 30 38 / 4%);
+  --elevation-2:
+    0 2px 4px rgb(25 30 38 / 8%),
+    0 2px 8px rgb(25 30 38 / 5%);
+  --elevation-4:
+    0 4px 8px rgb(25 30 38 / 9%),
+    0 3px 12px rgb(25 30 38 / 6%);
+  --elevation-8:
+    0 8px 18px rgb(25 30 38 / 11%),
+    0 4px 14px rgb(25 30 38 / 7%);
+  --elevation-16:
+    0 16px 32px rgb(25 30 38 / 15%),
+    0 6px 18px rgb(25 30 38 / 8%);
+  --elevation-24:
+    0 24px 48px rgb(25 30 38 / 18%),
+    0 8px 24px rgb(25 30 38 / 10%);
+  --shadow-nav:
+    0 -4px 14px rgb(25 30 38 / 8%),
+    0 -1px 4px rgb(25 30 38 / 5%);
+  --shadow-modal: var(--elevation-24);
+  --nav-height: 64px;
+  --page-max: 480px;
+  --z-nav: 20;
+  --z-modal: 40;
+}

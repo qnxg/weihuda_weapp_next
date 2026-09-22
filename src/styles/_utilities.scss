@@ -1,0 +1,92 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.cluster {
+  display: flex;
+  align-items: center;
+}
+
+.spread {
+  justify-content: space-between;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.gap-4 {
+  gap: 4px;
+}
+
+.gap-8 {
+  gap: 8px;
+}
+
+.gap-12 {
+  gap: 12px;
+}
+
+.gap-16 {
+  gap: 16px;
+}
+
+.text-sm {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.text-lg {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.text-danger {
+  color: var(--brand);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.text-clamp-2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+.divider {
+  height: 1px;
+  border: 0;
+  background: var(--line);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

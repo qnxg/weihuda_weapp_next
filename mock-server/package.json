@@ -1,0 +1,15 @@
+{
+  "name": "weihuda-api-mock",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mock server generated from Apifox project 8872112",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

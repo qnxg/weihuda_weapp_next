@@ -1,0 +1,70 @@
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+export type AuthMode = "public" | "required";
+
+export interface EndpointDefinition {
+  id: string;
+  method: HttpMethod;
+  path: string;
+  auth: AuthMode;
+  consumer: string;
+}
+
+export const endpointCatalog = [
+  { id: "system.health", method: "GET", path: "/", auth: "public", consumer: "/about" },
+  { id: "system.about", method: "GET", path: "/about", auth: "public", consumer: "/about" },
+  { id: "auth.login", method: "POST", path: "/auth/login", auth: "public", consumer: "/login" },
+  { id: "auth.refresh", method: "POST", path: "/auth/refresh", auth: "public", consumer: "request-client" },
+  { id: "auth.tfa.send", method: "GET", path: "/auth/tfa", auth: "required", consumer: "/login" },
+  { id: "auth.tfa.verify", method: "POST", path: "/auth/tfa", auth: "required", consumer: "/login" },
+  { id: "auth.unbind", method: "POST", path: "/auth/unbind", auth: "required", consumer: "/me" },
+  { id: "me.get", method: "GET", path: "/me", auth: "required", consumer: "/,/me" },
+  { id: "settings.all", method: "GET", path: "/me/setting", auth: "required", consumer: "/settings" },
+  { id: "settings.one", method: "GET", path: "/me/setting/{type}", auth: "required", consumer: "/settings" },
+  { id: "settings.update", method: "PUT", path: "/me/setting/{type}", auth: "required", consumer: "/settings" },
+  { id: "card.info", method: "GET", path: "/card/info", auth: "required", consumer: "/services/card" },
+  { id: "card.records", method: "GET", path: "/card/record", auth: "required", consumer: "/services/card" },
+  { id: "rank.school", method: "GET", path: "/rank", auth: "required", consumer: "/services/grades" },
+  { id: "rank.ca", method: "GET", path: "/rank/ca", auth: "required", consumer: "/services/grades" },
+  { id: "rank.ca.refresh", method: "PUT", path: "/rank/ca", auth: "required", consumer: "/services/grades" },
+  { id: "course.table", method: "GET", path: "/classtable", auth: "required", consumer: "/schedule" },
+  { id: "course.extra", method: "GET", path: "/course/extra", auth: "required", consumer: "/schedule" },
+  { id: "course.custom.create", method: "POST", path: "/course/custom", auth: "required", consumer: "/schedule" },
+  { id: "course.custom.update", method: "PUT", path: "/course/custom/{customize_id}", auth: "required", consumer: "/schedule" },
+  { id: "course.custom.delete", method: "DELETE", path: "/course/custom/{customize_id}", auth: "required", consumer: "/schedule" },
+  { id: "semester.get", method: "GET", path: "/semester", auth: "required", consumer: "/,/schedule" },
+  { id: "points.summary", method: "GET", path: "/jifen", auth: "required", consumer: "/services/points" },
+  { id: "points.checkin", method: "POST", path: "/jifen", auth: "required", consumer: "/services/points" },
+  { id: "points.records", method: "GET", path: "/jifen/record", auth: "required", consumer: "/services/points" },
+  { id: "points.description", method: "GET", path: "/jifen/desc", auth: "required", consumer: "/services/points" },
+  { id: "points.goods", method: "GET", path: "/jifen/goods", auth: "required", consumer: "/services/points" },
+  { id: "points.goods.exchange", method: "POST", path: "/jifen/goods/{id}", auth: "required", consumer: "/services/points" },
+  { id: "points.goods.exchanged", method: "GET", path: "/jifen/goods/exchanged", auth: "required", consumer: "/services/points" },
+  { id: "email.unread", method: "GET", path: "/email", auth: "required", consumer: "/services" },
+  { id: "dorm.info", method: "GET", path: "/dorm", auth: "required", consumer: "/services/dorm" },
+  { id: "dorm.refresh", method: "PUT", path: "/dorm", auth: "required", consumer: "/services/dorm" },
+  { id: "dorm.electricity", method: "GET", path: "/dorm/electricity", auth: "required", consumer: "/services/dorm" },
+  { id: "dorm.electricity.refresh", method: "PUT", path: "/dorm/electricity", auth: "required", consumer: "/services/dorm" },
+  { id: "grade.list", method: "GET", path: "/grade", auth: "required", consumer: "/services/grades" },
+  { id: "grade.detail", method: "GET", path: "/grade/{jx0404id}", auth: "required", consumer: "/services/grades" },
+  { id: "netflow.summary", method: "GET", path: "/netflow", auth: "required", consumer: "/services/network" },
+  { id: "netflow.orders", method: "GET", path: "/netflow/order", auth: "required", consumer: "/services/network" },
+  { id: "netflow.detail", method: "GET", path: "/netflow/detail", auth: "required", consumer: "/services/network" },
+  { id: "announcement.list", method: "GET", path: "/announcement", auth: "required", consumer: "/services/announcements" },
+  { id: "exam.list", method: "GET", path: "/exam", auth: "required", consumer: "/services/exams" },
+  { id: "exam.create", method: "POST", path: "/exam", auth: "required", consumer: "/services/exams" },
+  { id: "exam.update", method: "PUT", path: "/exam/{customize_id}", auth: "required", consumer: "/services/exams" },
+  { id: "exam.delete", method: "DELETE", path: "/exam/{customize_id}", auth: "required", consumer: "/services/exams" },
+  { id: "feedback.list", method: "GET", path: "/feedback", auth: "required", consumer: "/feedback" },
+  { id: "feedback.create", method: "POST", path: "/feedback", auth: "required", consumer: "/feedback" },
+  { id: "feedback.public", method: "POST", path: "/feedback/no_auth", auth: "public", consumer: "/feedback" },
+  { id: "image.upload", method: "POST", path: "/img/{tag}", auth: "required", consumer: "/feedback" },
+  { id: "image.get", method: "GET", path: "/img/{id}", auth: "required", consumer: "/feedback" },
+  { id: "gym.grade", method: "GET", path: "/gym/grade", auth: "required", consumer: "/services/gym" },
+  { id: "gym.appointment", method: "GET", path: "/gym/appointment", auth: "required", consumer: "/services/gym" },
+  { id: "lab.bind", method: "POST", path: "/lab/bind", auth: "required", consumer: "/services/lab" },
+  { id: "lab.schedule", method: "GET", path: "/lab/schedule", auth: "required", consumer: "/services/lab" },
+  { id: "lab.grade", method: "GET", path: "/lab/grade", auth: "required", consumer: "/services/lab" },
+  { id: "notice.list", method: "GET", path: "/notice", auth: "required", consumer: "/notices" },
+  { id: "notice.read", method: "PUT", path: "/notice/{id}", auth: "required", consumer: "/notices" },
+  { id: "room.empty", method: "GET", path: "/empty_room", auth: "required", consumer: "/services/rooms" },
+] as const satisfies readonly EndpointDefinition[];
