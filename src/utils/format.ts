@@ -14,6 +14,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   hour12: false,
 });
 
+const weekdayCharacters = ["日", "一", "二", "三", "四", "五", "六"];
 const numberFormatter = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 });
 const currencyFormatter = new Intl.NumberFormat("zh-CN", {
   style: "currency",
@@ -31,6 +32,10 @@ export function parseApiDate(value: string) {
 export function formatDate(value: string | Date) {
   const date = typeof value === "string" ? parseApiDate(value) : value;
   return date ? dateFormatter.format(date) : "时间待定";
+}
+
+export function formatDateHeading(date = new Date()) {
+  return `${date.getMonth() + 1} 月 ${date.getDate()} 日 星期${weekdayCharacters[date.getDay()]}`;
 }
 
 export function formatDateTime(value: string) {
@@ -57,9 +62,29 @@ export function getCurrentWeek(semester: Semester, date = new Date()) {
   return Math.max(base, Math.min(elapsedWeeks + base, semester.weeks));
 }
 
+export function isDateInSemester(semester: Semester, date = new Date()) {
+  const start = parseApiDate(semester.start);
+  if (!start) return false;
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + semester.weeks * 7);
+  const current = new Date(date);
+  current.setHours(0, 0, 0, 0);
+  return current >= start && current < end;
+}
+
+export function dateForSemesterDay(semester: Semester, week: number, day: number) {
+  const start = parseApiDate(semester.start);
+  if (!start) return null;
+  start.setHours(0, 0, 0, 0);
+  const baseWeek = semester.from_zero ? 0 : 1;
+  const dayOffset = (day - start.getDay() + 7) % 7;
+  start.setDate(start.getDate() + (week - baseWeek) * 7 + dayOffset);
+  return start;
+}
+
 export function currentWeekday(date = new Date()) {
-  const day = date.getDay();
-  return day === 0 ? 7 : day;
+  return date.getDay();
 }
 
 export function termName(term: string) {

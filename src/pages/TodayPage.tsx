@@ -1,19 +1,32 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bell, CalendarClock, MapPin } from "lucide-react";
+import { Bell } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/api";
 import type { IndexCardKey, IndexCardSetting } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
-import { AuthPrompt, EmptyState, PageError, PageHeader, PageSkeleton, Section } from "../components/ui";
-import { currentWeekday, formatDate, getCurrentWeek, periodName, termName } from "../utils/format";
+import { TodayCourses } from "../components/TodayCourses";
+import { AuthPrompt, PageError, PageHeader, PageSkeleton, Section } from "../components/ui";
+import { useMinuteClock } from "../hooks/useMinuteClock";
+import {
+  currentWeekday,
+  formatDate,
+  formatDateHeading,
+  getCurrentWeek,
+  isDateInSemester,
+  termName,
+} from "../utils/format";
 
 const CAMPUS_IMAGE =
   "https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=Realistic%20documentary%20photograph%20of%20students%20walking%20between%20red%20brick%20academic%20buildings%20at%20Hunan%20University%20campus%20on%20a%20clear%20early%20autumn%20morning%2C%20natural%20soft%20sunlight%2C%20authentic%20Chinese%20university%20life%2C%20wide%20mobile%20banner%20composition%2C%20no%20text%2C%20no%20logos&image_size=landscape_16_9";
 
+function calendarDateKey(date: Date) {
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
 export default function TodayPage() {
   const { isAuthenticated } = useAuth();
-  const me = useQuery({ queryKey: ["me"], queryFn: api.me.get, enabled: isAuthenticated });
+  const now = useMinuteClock();
   const semester = useQuery({
     queryKey: ["semester", 2026, "autumn"],
     queryFn: () => api.semester.get(2026, "autumn"),
@@ -66,7 +79,7 @@ export default function TodayPage() {
     );
   }
 
-  const queries = [me, semester, courses, exams, notices, cards];
+  const queries = [semester, courses, exams, notices, cards];
   if (queries.some((query) => query.isPending)) {
     return <div className="page"><PageSkeleton rows={6} /></div>;
   }
@@ -80,11 +93,24 @@ export default function TodayPage() {
     );
   }
 
-  const week = getCurrentWeek(semester.data!);
-  const day = currentWeekday();
-  const todayCourses = courses.data!
-    .filter((course) => course.day === day && course.weeks.includes(week))
-    .toSorted((left, right) => left.time - right.time);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const week = getCurrentWeek(semester.data!, today);
+  const tomorrowWeek = getCurrentWeek(semester.data!, tomorrow);
+  const day = currentWeekday(today);
+  const tomorrowDay = currentWeekday(tomorrow);
+  const todayCourses = isDateInSemester(semester.data!, today)
+    ? courses.data!
+      .filter((course) => course.day === day && course.weeks.includes(week))
+      .toSorted((left, right) => left.time - right.time)
+    : [];
+  const tomorrowCourses = isDateInSemester(semester.data!, tomorrow)
+    ? courses.data!
+      .filter((course) => course.day === tomorrowDay && course.weeks.includes(tomorrowWeek))
+      .toSorted((left, right) => left.time - right.time)
+    : [];
   const upcomingExam = exams.data!.find((exam) => exam.date && new Date(`${exam.date}T23:59:59`) >= new Date());
   const configuredCards = cards.data!.setting.cards;
   const overviewCards = configuredCards.filter((card) => !["course", "tasks"].includes(card));
@@ -117,45 +143,25 @@ export default function TodayPage() {
   return (
     <div className="page">
       <PageHeader
-        title={`${me.data!.name}，今天好`}
-        description={`${formatDate(new Date())} · ${semester.data!.xn} ${termName(semester.data!.xq)} · 第 ${week} 周`}
-        action={
+        title={formatDateHeading(now)}
+        description={<>{semester.data!.xn} {termName(semester.data!.xq)} · <strong>第 {week} 周</strong></>}
+        leadingAction={
           <Link className="icon-button" to="/notices" aria-label={`${notices.data!.count} 条未读通知`}>
             <Bell aria-hidden="true" />
           </Link>
         }
       />
 
-      {configuredCards.includes("course") ? <Section
-          title="今日课程"
-          action={<Link className="button button--ghost button--small" to="/schedule">完整课表</Link>}
-        >
-        {todayCourses.length ? (
-          <div className="timeline">
-            {todayCourses.map((course) => (
-              <article className="timeline-item" key={`${course.course_name}-${course.time}-${course.customize_id ?? "school"}`}>
-                <time className="timeline-item__time">{periodName(course.time)}</time>
-                <span className="timeline-item__dot" aria-hidden="true" />
-                <div className="course-block">
-                  <p className="course-block__name">{course.course_name}</p>
-                  <p className="course-block__meta cluster gap-4">
-                    <MapPin aria-hidden="true" />
-                    {course.place || "地点待定"}
-                  </p>
-                  <p className="course-block__meta">{course.teacher || "教师待定"}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            title="今天没有课程"
-            description="可以查看其他日期，或添加一门自定义课程。"
-            icon={CalendarClock}
-            action={<Link className="button button--secondary" to="/schedule">查看本周</Link>}
-          />
-        )}
-        </Section> : null}
+      {configuredCards.includes("course") ? (
+        <TodayCourses
+          key={calendarDateKey(today)}
+          todayCourses={todayCourses}
+          tomorrowCourses={tomorrowCourses}
+          today={today}
+          tomorrow={tomorrow}
+          now={now}
+        />
+      ) : null}
 
       <Section title="近期事项">
         <div className="surface">

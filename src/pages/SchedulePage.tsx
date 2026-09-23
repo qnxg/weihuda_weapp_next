@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Trash2 } from "lucide-
 import { useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../api/api";
-import type { Course, CustomCourseRequest, Semester, TableSetting } from "../api/types";
+import type { Course, CustomCourseRequest, TableSetting } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import {
   AuthPrompt,
@@ -16,16 +16,10 @@ import {
   Section,
   StatusMessage,
 } from "../components/ui";
-import { currentWeekday, getCurrentWeek, periodName, termName, weekdays } from "../utils/format";
+import { courseSessionKey, courseSessionPeriodLabel, groupCourseSessions } from "../utils/course";
+import { currentWeekday, dateForSemesterDay, getCurrentWeek, termName, weekdays } from "../utils/format";
 
 const dayNumberFormatter = new Intl.DateTimeFormat("zh-CN", { day: "numeric" });
-
-function dateForDay(semester: Semester, week: number, day: number) {
-  const start = new Date(`${semester.start}T00:00:00`);
-  const baseWeek = semester.from_zero ? 0 : 1;
-  start.setDate(start.getDate() + (week - baseWeek) * 7 + day - 1);
-  return start;
-}
 
 function parseNumberList(value: FormDataEntryValue | null) {
   return String(value || "")
@@ -87,8 +81,11 @@ function CourseEditor({
         </div>
         <div className="field">
           <label htmlFor="course-day">星期</label>
-          <select id="course-day" name="day" defaultValue={course?.day || day}>
-            {weekdays.map((label, index) => <option key={label} value={index + 1}>{label}</option>)}
+          <select id="course-day" name="day" defaultValue={course?.day ?? day}>
+            {weekdays.map((label, index) => {
+              const value = (index + 1) % 7;
+              return <option key={label} value={value}>{label}</option>;
+            })}
           </select>
         </div>
         <div className="field">
@@ -166,8 +163,11 @@ export default function SchedulePage() {
   const selectedWeek = semester.data && requestedWeek >= (semester.data.from_zero ? 0 : 1) && requestedWeek <= semester.data.weeks
     ? requestedWeek
     : currentWeek;
-  const requestedDay = Number(searchParams.get("day"));
-  const selectedDay = requestedDay >= 1 && requestedDay <= 7 ? requestedDay : currentWeekday();
+  const requestedDayValue = searchParams.get("day");
+  const requestedDay = Number(requestedDayValue);
+  const selectedDay = requestedDayValue !== null && requestedDay >= 0 && requestedDay <= 6
+    ? requestedDay
+    : currentWeekday();
 
   const visibleCourses = useMemo(() => {
     if (!courses.data) return [];
@@ -180,6 +180,7 @@ export default function SchedulePage() {
       )
       .toSorted((left, right) => left.time - right.time);
   }, [courses.data, selectedDay, selectedWeek, tableSetting.data]);
+  const visibleSessions = useMemo(() => groupCourseSessions(visibleCourses), [visibleCourses]);
 
   function setCalendar(next: { week?: number; day?: number }) {
     const value = new URLSearchParams(searchParams);
@@ -239,25 +240,27 @@ export default function SchedulePage() {
         </div>
         <div className="day-strip" aria-label="选择星期">
           {weekdays.map((label, index) => {
-            const day = index + 1;
+            const day = (index + 1) % 7;
+            const calendarDate = dateForSemesterDay(semester.data!, selectedWeek, day);
             return (
               <button className={`day-button${selectedDay === day ? " is-active" : ""}`} type="button" key={label} onClick={() => setCalendar({ day })} aria-pressed={selectedDay === day}>
                 {label.slice(1)}
-                <span>{dayNumberFormatter.format(dateForDay(semester.data!, selectedWeek, day))}</span>
+                <span>{calendarDate ? dayNumberFormatter.format(calendarDate) : "—"}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      <Section title={weekdays[selectedDay - 1]}>
-        {visibleCourses.length ? (
+      <Section title={weekdays[selectedDay === 0 ? 6 : selectedDay - 1]}>
+        {visibleSessions.length ? (
           <div className="timeline">
-            {visibleCourses.map((course) => {
+            {visibleSessions.map((session) => {
+              const { course } = session;
               const active = course.weeks.includes(selectedWeek);
               return (
-                <article className="timeline-item" key={`${course.course_name}-${course.time}-${course.customize_id ?? course.course_id}`}>
-                  <p className="timeline-item__time">{periodName(course.time)}</p>
+                <article className="timeline-item" key={courseSessionKey(session)}>
+                  <p className="timeline-item__time">{courseSessionPeriodLabel(session)}</p>
                   <span className="timeline-item__dot" aria-hidden="true" />
                   <div className="course-block">
                     <div className="cluster spread gap-8">

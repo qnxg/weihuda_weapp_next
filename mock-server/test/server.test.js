@@ -34,6 +34,36 @@ test("returns documented hello response", async () => {
   assert.deepEqual(await response.json(), { code: "OK", data: { hello: "world" } });
 });
 
+test("provides full-week course fixtures with contiguous time-state scenarios", async () => {
+  const response = await fetch(`${baseUrl}/classtable?xn=2026&xq=autumn`, { headers: authHeaders });
+  const payload = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(payload.code, "OK");
+  assert.ok(payload.data.length >= 20);
+  assert.deepEqual(
+    [...new Set(payload.data.map((course) => course.day))].sort((left, right) => left - right),
+    [0, 1, 2, 3, 4, 5, 6],
+  );
+  assert.ok(payload.data.every((course) => course.day >= 0 && course.day <= 6));
+  assert.ok(payload.data.every((course) => course.time >= 1 && course.time <= 12));
+  assert.deepEqual(
+    payload.data
+      .filter((course) => course.course_id === "COMP3022")
+      .map((course) => course.time),
+    [11, 12],
+  );
+  assert.deepEqual(
+    payload.data.find((course) => course.course_id === "COMP3013").weeks,
+    [1, 3, 5, 7, 9, 11, 13, 15],
+  );
+
+  const wednesdayPeriods = payload.data
+    .filter((course) => course.day === 3)
+    .map((course) => course.time)
+    .sort((left, right) => left - right);
+  assert.deepEqual(wednesdayPeriods, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+});
+
 test("supports a stateful settings update", async () => {
   const value = { version: 2, setting: { display_not_current_week_courses: false } };
   const update = await fetch(`${baseUrl}/me/setting/table`, {

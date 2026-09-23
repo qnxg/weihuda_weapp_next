@@ -5,7 +5,16 @@ async function login(page: Page) {
   await page.getByLabel("学号").fill("202208010101");
   await page.getByLabel("密码").fill("mock-password");
   await page.getByRole("button", { name: "登录", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "张同学，今天好" })).toBeVisible();
+  const dateHeading = page.getByRole("heading", { name: /^\d{1,2} 月 \d{1,2} 日 星期[一二三四五六日]$/ });
+  const notice = page.getByRole("link", { name: /\d+ 条未读通知/ });
+  await expect(dateHeading).toBeVisible();
+  await expect(page.locator(".page-header p")).toHaveText(/2026 秋季学期 · 第 \d+ 周/);
+  await expect(page.locator(".page-header p strong")).toHaveText(/第 \d+ 周/);
+  const header = page.locator(".page-header");
+  await expect(header).toHaveCSS("position", "sticky");
+  expect(await header.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe("none");
+  const [headingBox, noticeBox] = await Promise.all([dateHeading.boundingBox(), notice.boundingBox()]);
+  expect(noticeBox?.x).toBeLessThan(headingBox?.x || 0);
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -78,6 +87,118 @@ test("login opens a populated schedule and service pages", async ({ page }, test
   await page.goto("/services");
   await expect(page.getByRole("heading", { name: "服务", exact: true })).toBeVisible();
   await page.screenshot({ path: `artifacts/${testInfo.project.name}-services.png`, fullPage: true });
+});
+
+test("today courses switch days and expose time-based card states", async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date("2026-09-23T14:15:00"));
+  await login(page);
+
+  const todayTab = page.getByRole("tab", { name: "今日课程" });
+  const tomorrowTab = page.getByRole("tab", { name: "明日课程" });
+  await expect(todayTab).toHaveAttribute("aria-selected", "true");
+  const headerToTabsGap = await page.evaluate(() => {
+    const header = document.querySelector(".page-header")!.getBoundingClientRect();
+    const tabs = document.querySelector(".course-day-tabs")!.getBoundingClientRect();
+    return tabs.top - header.bottom;
+  });
+  expect(headerToTabsGap).toBeGreaterThanOrEqual(7);
+  expect(headerToTabsGap).toBeLessThanOrEqual(9);
+  await expect(page.getByRole("article", { name: "算法设计与分析，已结束" })).toHaveClass(/course-card--completed/);
+  await expect(page.getByRole("article", { name: "操作系统，即将开始" })).toHaveClass(/course-card--warning/);
+  await expect(page.getByRole("article", { name: "移动应用开发实践，未开始" })).toHaveClass(/course-card--upcoming/);
+  await expect(page.getByText("编译原理", { exact: true })).toHaveCount(0);
+  const warningStatus = page.getByText("即将开始", { exact: true });
+  await expect(warningStatus).toBeVisible();
+  await expect(page.getByText(/^(已结束|上课中|未开始)$/)).toHaveCount(0);
+  await expect(page.getByText("完整课表")).toHaveCount(0);
+  await expect(page.locator(".today-courses .timeline")).toHaveCount(0);
+
+  const [panelBox, cardBox] = await Promise.all([
+    page.locator(".course-day-panel").boundingBox(),
+    page.locator(".course-card").first().boundingBox(),
+  ]);
+  expect(Math.abs((panelBox?.x || 0) - (cardBox?.x || 0))).toBeLessThan(1);
+  expect(Math.abs((panelBox?.width || 0) - (cardBox?.width || 0))).toBeLessThan(1);
+  expect(cardBox?.height).toBeLessThan(80);
+
+  const listVisual = await page.locator(".course-card-list").evaluate((list) => {
+    const style = getComputedStyle(list);
+    return {
+      itemCount: list.children.length,
+      overflow: style.overflow,
+      radius: style.borderRadius,
+      shadow: style.boxShadow,
+    };
+  });
+  expect(listVisual.itemCount).toBe(4);
+  expect(listVisual.overflow).toBe("hidden");
+  expect(listVisual.radius).toBe("6px");
+  expect(listVisual.shadow).not.toBe("none");
+
+  const visualStates = await page.locator(".course-card").evaluateAll((cards) =>
+    Object.fromEntries(cards.map((card) => {
+      const status = [...card.classList].find((name) => name.startsWith("course-card--"))?.replace("course-card--", "");
+      const style = getComputedStyle(card);
+      const stripe = card.querySelector<HTMLElement>(".course-card__stripe")!;
+      const content = card.querySelector<HTMLElement>(".course-card__content")!;
+      const firstTime = card.querySelector<HTMLElement>(".course-card__time")!;
+      const stripeBox = stripe.getBoundingClientRect();
+      return [status, {
+        background: style.backgroundColor,
+        borderLeftWidth: style.borderLeftWidth,
+        borderTopWidth: style.borderTopWidth,
+        contentBorderTopWidth: getComputedStyle(content).borderTopWidth,
+        contentInset: firstTime.getBoundingClientRect().left - stripeBox.right,
+        shadow: style.boxShadow,
+        stripeColor: getComputedStyle(stripe).backgroundColor,
+        stripeWidth: stripeBox.width,
+        titleWeight: getComputedStyle(card.querySelector("h3")!).fontWeight,
+      }];
+    })),
+  );
+  expect(visualStates.completed.shadow).toBe("none");
+  expect(visualStates.completed.stripeWidth).toBe(6);
+  expect(visualStates.completed.stripeColor).toBe("rgb(232, 234, 238)");
+  expect(visualStates.upcoming.background).toBe("rgb(255, 255, 255)");
+  expect(visualStates.upcoming.borderLeftWidth).toBe("0px");
+  expect(visualStates.upcoming.contentInset).toBeGreaterThanOrEqual(12);
+  expect(visualStates.upcoming.shadow).toBe("none");
+  expect(visualStates.upcoming.stripeWidth).toBe(6);
+  expect(visualStates.upcoming.stripeColor).toBe("rgb(207, 211, 218)");
+  expect(visualStates.upcoming.titleWeight).toBe("400");
+  expect(visualStates.warning.background).not.toBe(visualStates.upcoming.background);
+  expect(visualStates.warning.borderTopWidth).toBe("0px");
+  expect(visualStates.warning.contentBorderTopWidth).toBe("1px");
+  expect(visualStates.warning.stripeWidth).toBe(6);
+
+  await page.clock.setFixedTime(new Date("2026-09-23T14:40:00"));
+  await page.reload();
+  const activeCard = page.getByRole("article", { name: "操作系统，上课中" });
+  await expect(activeCard).toHaveClass(/course-card--active/);
+  await expect(page.getByText("上课中", { exact: true })).toBeVisible();
+  await expect(page.getByText("即将开始", { exact: true })).toHaveCount(0);
+  const activeVisual = await activeCard.evaluate((card) => ({
+    background: getComputedStyle(card).backgroundColor,
+    stripeColor: getComputedStyle(card.querySelector<HTMLElement>(".course-card__stripe")!).backgroundColor,
+    stripeWidth: card.querySelector<HTMLElement>(".course-card__stripe")!.getBoundingClientRect().width,
+  }));
+  expect(activeVisual.background).toBe("rgb(234, 244, 239)");
+  expect(activeVisual.stripeColor).toBe("rgb(54, 115, 86)");
+  expect(activeVisual.stripeWidth).toBe(6);
+
+  await tomorrowTab.click();
+  await expect(tomorrowTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText("数据库系统", { exact: true })).toBeVisible();
+  await expect(page.getByText("计算机组成原理", { exact: true })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({ path: `artifacts/${testInfo.project.name}-today-courses.png`, fullPage: true });
+});
+
+test("today courses default to tomorrow after the last class", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-09-23T22:00:00"));
+  await login(page);
+  await expect(page.getByRole("tab", { name: "明日课程" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText("数据库系统", { exact: true })).toBeVisible();
 });
 
 test("grades remain usable while trusted ranking is being generated", async ({ page }) => {

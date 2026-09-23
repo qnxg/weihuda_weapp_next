@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { AuthPrompt, EmptyState, PageError } from "./ui";
+import { AuthPrompt, EmptyState, PageError, PageHeader } from "./ui";
 
 describe("shared page states", () => {
   it("provides a clear login action for protected content", () => {
@@ -29,5 +29,21 @@ describe("shared page states", () => {
     render(<EmptyState title="暂无成绩" description="当前学期还没有可查询的成绩。" />);
     expect(screen.getByRole("heading", { name: "暂无成绩" })).toBeVisible();
     expect(screen.getByText("当前学期还没有可查询的成绩。")).toBeVisible();
+  });
+
+  it("supports a leading action and emphasized header metadata", () => {
+    render(
+      <MemoryRouter>
+        <PageHeader
+          title="9 月 23 日 星期三"
+          description={<>2026 秋季学期 · <strong>第 2 周</strong></>}
+          leadingAction={<a href="/notices" aria-label="3 条未读通知">通知</a>}
+        />
+      </MemoryRouter>,
+    );
+    const header = screen.getByRole("banner");
+    const noticeLink = screen.getByRole("link", { name: "3 条未读通知" });
+    expect(header.firstElementChild?.firstElementChild).toBe(noticeLink);
+    expect(screen.getByText("第 2 周").tagName).toBe("STRONG");
   });
 });

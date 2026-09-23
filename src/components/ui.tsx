@@ -14,17 +14,20 @@ export function PageHeader({
   title,
   description,
   back = false,
+  leadingAction,
   action,
 }: {
   title: string;
-  description?: string;
+  description?: ReactNode;
   back?: boolean;
+  leadingAction?: ReactNode;
   action?: ReactNode;
 }) {
   const navigate = useNavigate();
   return (
     <header className="page-header">
       <div className="cluster gap-12 min-w-0">
+        {leadingAction}
         {back ? (
           <button className="icon-button" type="button" onClick={() => navigate(-1)} aria-label="返回">
             <ArrowLeft aria-hidden="true" />
