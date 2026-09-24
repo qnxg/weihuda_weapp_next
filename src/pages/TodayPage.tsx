@@ -17,8 +17,7 @@ import {
   termName,
 } from "../utils/format";
 
-const CAMPUS_IMAGE =
-  "https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=Realistic%20documentary%20photograph%20of%20students%20walking%20between%20red%20brick%20academic%20buildings%20at%20Hunan%20University%20campus%20on%20a%20clear%20early%20autumn%20morning%2C%20natural%20soft%20sunlight%2C%20authentic%20Chinese%20university%20life%2C%20wide%20mobile%20banner%20composition%2C%20no%20text%2C%20no%20logos&image_size=landscape_16_9";
+const CAMPUS_IMAGE = "https://placehold.co/640x320";
 
 function calendarDateKey(date: Date) {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;

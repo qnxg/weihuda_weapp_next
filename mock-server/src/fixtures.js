@@ -61,7 +61,7 @@ export const state = {
     {
       id: 1,
       goods_name: "校园文创笔记本",
-      goods_cover: "https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=Minimal%20product%20photograph%20of%20a%20red%20and%20white%20university%20campus%20notebook%20on%20a%20clean%20light%20gray%20surface%2C%20realistic%20studio%20lighting%2C%20no%20text%2C%20square%20catalog%20image&image_size=square",
+      goods_cover: "https://placehold.co/50",
       goods_description: "微生活纪念品",
       created_at: "2026-09-20 12:00:00",
       receive_time: null,
@@ -292,8 +292,8 @@ export const fixtures = {
     },
   ],
   goods: [
-    { id: 1, name: "校园文创笔记本", cover: "https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=Minimal%20product%20photograph%20of%20a%20red%20and%20white%20university%20campus%20notebook%20on%20a%20clean%20light%20gray%20surface%2C%20realistic%20studio%20lighting%2C%20no%20text%2C%20square%20catalog%20image&image_size=square", count: 20, price: 200, description: "微生活纪念品" },
-    { id: 2, name: "校园主题帆布袋", cover: "https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=Realistic%20studio%20product%20photograph%20of%20a%20white%20canvas%20tote%20bag%20with%20a%20small%20deep%20red%20university%20building%20motif%2C%20clean%20light%20gray%20background%2C%20no%20words%2C%20square%20catalog%20image&image_size=square", count: 8, price: 500, description: "轻便耐用的校园主题帆布袋" },
+    { id: 1, name: "校园文创笔记本", cover: "https://placehold.co/50", count: 20, price: 200, description: "微生活纪念品" },
+    { id: 2, name: "校园主题帆布袋", cover: "https://placehold.co/50", count: 8, price: 500, description: "轻便耐用的校园主题帆布袋" },
   ],
   pointRecords: [
     { id: 1, jifen: 10, description: "签到", created_at: "2026-09-22 08:00:00" },
