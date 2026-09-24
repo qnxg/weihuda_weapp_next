@@ -2,7 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api } from "../api/api";
 import type { IndexCardKey, IndexCardSetting, TableSetting } from "../api/types";
-import { DataRow, PageError, PageHeader, PageSkeleton, Section, StatusMessage } from "../components/ui";
+import {
+  DataRow,
+  PageError,
+  PageHeader,
+  PageSkeleton,
+  Section,
+  StatusMessage,
+} from "../components/ui";
 
 const cardOptions = [
   ["course", "今日课程", "课程时间、教室与教师"],
@@ -57,13 +64,21 @@ export default function SettingsPage() {
   });
 
   const queries = [settings, cards, table];
-  if (queries.some((query) => query.isPending)) return <div className="page"><PageSkeleton rows={7} /></div>;
+  if (queries.some((query) => query.isPending))
+    return (
+      <div className="page">
+        <PageSkeleton rows={7} />
+      </div>
+    );
   const failed = queries.find((query) => query.isError);
   if (failed) {
     return (
       <div className="page">
         <PageHeader title="设置" back />
-        <PageError error={failed.error} onRetry={() => void Promise.all(queries.map((query) => query.refetch()))} />
+        <PageError
+          error={failed.error}
+          onRetry={() => void Promise.all(queries.map((query) => query.refetch()))}
+        />
       </div>
     );
   }
@@ -88,7 +103,9 @@ export default function SettingsPage() {
     const data = new FormData(event.currentTarget);
     saveTable.mutate({
       version: table.data!.version + 1,
-      setting: { display_not_current_week_courses: data.get("display_not_current_week_courses") === "on" },
+      setting: {
+        display_not_current_week_courses: data.get("display_not_current_week_courses") === "on",
+      },
     });
   }
 
@@ -98,8 +115,20 @@ export default function SettingsPage() {
 
       <Section title="配置状态">
         <div className="surface list">
-          <DataRow label="首页卡片版本" value={settings.data!.index_card_setting.version} detail={`${settings.data!.index_card_setting.setting.cards.length} 个卡片`} />
-          <DataRow label="课表设置版本" value={settings.data!.table_setting.version} detail={settings.data!.table_setting.setting.display_not_current_week_courses ? "显示非本周课程" : "仅显示本周课程"} />
+          <DataRow
+            label="首页卡片版本"
+            value={settings.data!.index_card_setting.version}
+            detail={`${settings.data!.index_card_setting.setting.cards.length} 个卡片`}
+          />
+          <DataRow
+            label="课表设置版本"
+            value={settings.data!.table_setting.version}
+            detail={
+              settings.data!.table_setting.setting.display_not_current_week_courses
+                ? "显示非本周课程"
+                : "仅显示本周课程"
+            }
+          />
         </div>
       </Section>
 
@@ -121,15 +150,26 @@ export default function SettingsPage() {
                   <strong>{label}</strong>
                   <span>{description}</span>
                 </span>
-                <input type="checkbox" name="cards" value={value} defaultChecked={cards.data!.setting.cards.includes(value)} />
+                <input
+                  type="checkbox"
+                  name="cards"
+                  value={value}
+                  defaultChecked={cards.data!.setting.cards.includes(value)}
+                />
                 <span className="choice-card__surface" aria-hidden="true" />
               </label>
             ))}
           </fieldset>
           {cardValidation ? <StatusMessage tone="danger">{cardValidation}</StatusMessage> : null}
-          {saveCards.isError ? <StatusMessage tone="danger">{saveCards.error.message}</StatusMessage> : null}
+          {saveCards.isError ? (
+            <StatusMessage tone="danger">{saveCards.error.message}</StatusMessage>
+          ) : null}
           {cardMessage ? <StatusMessage tone="success">{cardMessage}</StatusMessage> : null}
-          <button className="button button--primary button--block" type="submit" disabled={saveCards.isPending}>
+          <button
+            className="button button--primary button--block"
+            type="submit"
+            disabled={saveCards.isPending}
+          >
             {saveCards.isPending ? "正在保存…" : "保存首页设置"}
           </button>
         </form>
@@ -149,12 +189,22 @@ export default function SettingsPage() {
               <strong>显示非本周课程</strong>
               <span>在每天的课表中保留其他周课程并标记状态</span>
             </span>
-            <input type="checkbox" name="display_not_current_week_courses" defaultChecked={table.data!.setting.display_not_current_week_courses} />
+            <input
+              type="checkbox"
+              name="display_not_current_week_courses"
+              defaultChecked={table.data!.setting.display_not_current_week_courses}
+            />
             <span className="choice-card__surface" aria-hidden="true" />
           </label>
-          {saveTable.isError ? <StatusMessage tone="danger">{saveTable.error.message}</StatusMessage> : null}
+          {saveTable.isError ? (
+            <StatusMessage tone="danger">{saveTable.error.message}</StatusMessage>
+          ) : null}
           {tableMessage ? <StatusMessage tone="success">{tableMessage}</StatusMessage> : null}
-          <button className="button button--secondary button--block" type="submit" disabled={saveTable.isPending}>
+          <button
+            className="button button--secondary button--block"
+            type="submit"
+            disabled={saveTable.isPending}
+          >
             {saveTable.isPending ? "正在保存…" : "保存课表设置"}
           </button>
         </form>

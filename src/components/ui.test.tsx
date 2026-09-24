@@ -36,8 +36,16 @@ describe("shared page states", () => {
       <MemoryRouter>
         <PageHeader
           title="9 月 23 日 星期三"
-          description={<>2026 秋季学期 · <strong>第 2 周</strong></>}
-          leadingAction={<a href="/notices" aria-label="3 条未读通知">通知</a>}
+          description={
+            <>
+              2026 秋季学期 · <strong>第 2 周</strong>
+            </>
+          }
+          leadingAction={
+            <a href="/notices" aria-label="3 条未读通知">
+              通知
+            </a>
+          }
         />
       </MemoryRouter>,
     );

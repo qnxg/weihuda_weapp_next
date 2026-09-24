@@ -29,7 +29,12 @@ export function PageHeader({
       <div className="cluster gap-12 min-w-0">
         {leadingAction}
         {back ? (
-          <button className="icon-button" type="button" onClick={() => navigate(-1)} aria-label="返回">
+          <button
+            className="icon-button"
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="返回"
+          >
             <ArrowLeft aria-hidden="true" />
           </button>
         ) : null}
@@ -109,13 +114,7 @@ export function PageSkeleton({ rows = 5 }: { rows?: number }) {
   );
 }
 
-export function PageError({
-  error,
-  onRetry,
-}: {
-  error: unknown;
-  onRetry?: () => void;
-}) {
+export function PageError({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   const message = error instanceof Error ? error.message : "页面加载失败，请稍后重试。";
   return (
     <div className="state-panel" role="alert">
@@ -172,7 +171,10 @@ export function AuthPrompt({
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
-      <Link className="button button--primary" to={`/login?returnTo=${encodeURIComponent(returnTo)}`}>
+      <Link
+        className="button button--primary"
+        to={`/login?returnTo=${encodeURIComponent(returnTo)}`}
+      >
         登录
       </Link>
     </div>
@@ -215,9 +217,11 @@ export function Modal({
 
   function trapFocus(event: KeyboardEvent<HTMLDialogElement>) {
     if (event.key !== "Tab") return;
-    const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
-      'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
-    )).filter((element) => !element.hidden);
+    const focusable = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => !element.hidden);
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
@@ -231,7 +235,8 @@ export function Modal({
   }
 
   useEffect(() => {
-    triggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    triggerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const dialog = dialogRef.current;
     if (dialog && !dialog.open) dialog.showModal();
     return () => {
@@ -263,7 +268,11 @@ export function Modal({
       <div className="modal__header cluster spread gap-12">
         <div>
           <h2 id={titleId}>{title}</h2>
-          {description ? <p className="muted text-sm" id={descriptionId}>{description}</p> : null}
+          {description ? (
+            <p className="muted text-sm" id={descriptionId}>
+              {description}
+            </p>
+          ) : null}
         </div>
         {showClose ? (
           <button className="icon-button" type="button" aria-label="关闭" onClick={onClose}>
@@ -298,13 +307,24 @@ export function ConfirmDialog({
   };
 
   return (
-    <Modal title={title} description={description} onClose={close} variant="confirmation" showClose={false}>
+    <Modal
+      title={title}
+      description={description}
+      onClose={close}
+      variant="confirmation"
+      showClose={false}
+    >
       {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
       <div className="modal__actions">
         <button className="button button--tonal" type="button" disabled={pending} onClick={close}>
           取消
         </button>
-        <button className="button button--danger" type="button" disabled={pending} onClick={onConfirm}>
+        <button
+          className="button button--danger"
+          type="button"
+          disabled={pending}
+          onClick={onConfirm}
+        >
           {pending ? "处理中…" : confirmLabel}
         </button>
       </div>

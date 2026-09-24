@@ -28,14 +28,7 @@ export interface Me {
 }
 
 export type IndexCardKey =
-  | "jifen"
-  | "course"
-  | "tasks"
-  | "electricity"
-  | "campus"
-  | "count_down"
-  | "grade"
-  | "email";
+  "jifen" | "course" | "tasks" | "electricity" | "campus" | "count_down" | "grade" | "email";
 
 export interface IndexCardSetting {
   version: number;

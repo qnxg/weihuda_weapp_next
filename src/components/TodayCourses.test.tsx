@@ -80,9 +80,15 @@ describe("TodayCourses", () => {
   it("renders completed, warning and upcoming card styles", () => {
     renderCourses(new Date("2026-09-23T14:15:00"));
 
-    expect(screen.getByRole("article", { name: "算法设计与分析，已结束" })).toHaveClass("course-card--completed");
-    expect(screen.getByRole("article", { name: "操作系统，即将开始" })).toHaveClass("course-card--warning");
-    expect(screen.getByRole("article", { name: "计算机网络，未开始" })).toHaveClass("course-card--upcoming");
+    expect(screen.getByRole("article", { name: "算法设计与分析，已结束" })).toHaveClass(
+      "course-card--completed",
+    );
+    expect(screen.getByRole("article", { name: "操作系统，即将开始" })).toHaveClass(
+      "course-card--warning",
+    );
+    expect(screen.getByRole("article", { name: "计算机网络，未开始" })).toHaveClass(
+      "course-card--upcoming",
+    );
     expect(screen.queryByText("已结束")).not.toBeInTheDocument();
     expect(screen.getByText("即将开始")).toBeInTheDocument();
     expect(screen.queryByText("未开始")).not.toBeInTheDocument();
@@ -90,7 +96,9 @@ describe("TodayCourses", () => {
 
   it("uses primary styling while a course is active", () => {
     renderCourses(new Date("2026-09-23T14:40:00"));
-    expect(screen.getByRole("article", { name: "操作系统，上课中" })).toHaveClass("course-card--active");
+    expect(screen.getByRole("article", { name: "操作系统，上课中" })).toHaveClass(
+      "course-card--active",
+    );
     expect(screen.getByText("上课中")).toBeInTheDocument();
   });
 

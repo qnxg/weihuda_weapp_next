@@ -7,7 +7,12 @@ import { formatDateTime } from "../../utils/format";
 export default function AnnouncementsPage() {
   const announcements = useQuery({ queryKey: ["announcements"], queryFn: api.announcement.list });
 
-  if (announcements.isPending) return <div className="page"><PageSkeleton rows={5} /></div>;
+  if (announcements.isPending)
+    return (
+      <div className="page">
+        <PageSkeleton rows={5} />
+      </div>
+    );
   if (announcements.isError) {
     return (
       <div className="page">
@@ -31,14 +36,26 @@ export default function AnnouncementsPage() {
                 </div>
                 <p className="text-pretty">{item.content}</p>
                 {item.url ? (
-                  <a className="button button--ghost button--small" href={item.url} target="_blank" rel="noreferrer">
-                    <ExternalLink aria-hidden="true" />查看详情
+                  <a
+                    className="button button--ghost button--small"
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink aria-hidden="true" />
+                    查看详情
                   </a>
                 ) : null}
               </article>
             ))}
           </div>
-        ) : <EmptyState title="暂无校园公告" description="服务动态和重要通知会显示在这里。" icon={Megaphone} />}
+        ) : (
+          <EmptyState
+            title="暂无校园公告"
+            description="服务动态和重要通知会显示在这里。"
+            icon={Megaphone}
+          />
+        )}
       </Section>
     </div>
   );

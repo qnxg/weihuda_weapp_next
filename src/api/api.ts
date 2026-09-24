@@ -72,8 +72,10 @@ export const api = {
     settings: () => request<Settings>("/me/setting"),
     setting: <T extends IndexCardSetting | TableSetting>(type: "index_card" | "table") =>
       request<T>(`/me/setting/${type}`),
-    updateSetting: <T extends IndexCardSetting | TableSetting>(type: "index_card" | "table", value: T) =>
-      request<T>(`/me/setting/${type}`, { method: "PUT", body: value }),
+    updateSetting: <T extends IndexCardSetting | TableSetting>(
+      type: "index_card" | "table",
+      value: T,
+    ) => request<T>(`/me/setting/${type}`, { method: "PUT", body: value }),
   },
   card: {
     info: () => request<CardInfo>("/card/info"),
@@ -82,7 +84,9 @@ export const api = {
   },
   rank: {
     school: (year: number, term: string) =>
-      request<Rank>(`/rank${toQuery({ xn: year, xq: term, range: "major", data_source: "total", display: "max" })}`),
+      request<Rank>(
+        `/rank${toQuery({ xn: year, xq: term, range: "major", data_source: "total", display: "max" })}`,
+      ),
     ca: () => request<CaRank | null>("/rank/ca"),
     refreshCa: () => request<void>("/rank/ca", { method: "PUT" }),
   },
@@ -142,8 +146,7 @@ export const api = {
     remove: (id: number) => request<void>(`/exam/${id}`, { method: "DELETE" }),
   },
   feedback: {
-    list: (page = 1, size = 20) =>
-      request<FeedbackList>(`/feedback${toQuery({ page, size })}`),
+    list: (page = 1, size = 20) => request<FeedbackList>(`/feedback${toQuery({ page, size })}`),
     create: (input: { contact: string | null; description: string; img: string | null }) =>
       request<void>("/feedback", { method: "POST", body: input }),
     createPublic: (input: { contact: string; description: string; stu_id: string }) =>

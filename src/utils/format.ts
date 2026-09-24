@@ -57,7 +57,9 @@ export function getCurrentWeek(semester: Semester, date = new Date()) {
   start.setHours(0, 0, 0, 0);
   const current = new Date(date);
   current.setHours(0, 0, 0, 0);
-  const elapsedWeeks = Math.floor((current.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+  const elapsedWeeks = Math.floor(
+    (current.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000),
+  );
   const base = semester.from_zero ? 0 : 1;
   return Math.max(base, Math.min(elapsedWeeks + base, semester.weeks));
 }

@@ -13,7 +13,9 @@ before(async () => {
 });
 
 after(async () => {
-  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  await new Promise((resolve, reject) =>
+    server.close((error) => (error ? reject(error) : resolve())),
+  );
 });
 
 test("registers every Apifox endpoint", () => {
@@ -22,8 +24,14 @@ test("registers every Apifox endpoint", () => {
 });
 
 test("applies 500ms to 1000ms jitter with an explicit override", () => {
-  assert.equal(resolveDelay({}, () => 0), 500);
-  assert.equal(resolveDelay({}, () => 0.999999), 1000);
+  assert.equal(
+    resolveDelay({}, () => 0),
+    500,
+  );
+  assert.equal(
+    resolveDelay({}, () => 0.999999),
+    1000,
+  );
   assert.equal(resolveDelay({ "x-mock-delay": "750" }), 750);
   assert.equal(resolveDelay({ "x-mock-delay": "0" }), 0);
 });
@@ -47,9 +55,7 @@ test("provides full-week course fixtures with contiguous time-state scenarios", 
   assert.ok(payload.data.every((course) => course.day >= 0 && course.day <= 6));
   assert.ok(payload.data.every((course) => course.time >= 1 && course.time <= 12));
   assert.deepEqual(
-    payload.data
-      .filter((course) => course.course_id === "COMP3022")
-      .map((course) => course.time),
+    payload.data.filter((course) => course.course_id === "COMP3022").map((course) => course.time),
     [11, 12],
   );
   assert.deepEqual(
@@ -87,11 +93,16 @@ test("supports creating and reading a custom exam", async () => {
     start_time: "14:00",
     end_time: "16:00",
   };
-  assert.equal((await fetch(`${baseUrl}/exam`, {
-    method: "POST",
-    headers: { ...authHeaders, "Content-Type": "application/json" },
-    body: JSON.stringify(exam),
-  })).status, 200);
+  assert.equal(
+    (
+      await fetch(`${baseUrl}/exam`, {
+        method: "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify(exam),
+      })
+    ).status,
+    200,
+  );
 
   const payload = await (await fetch(`${baseUrl}/exam`, { headers: authHeaders })).json();
   assert.equal(payload.code, "OK");
@@ -106,7 +117,9 @@ test("returns binary content for image endpoint", async () => {
 });
 
 test("can force error responses for client testing", async () => {
-  const response = await fetch(`${baseUrl}/me`, { headers: { ...authHeaders, "X-Mock-Status": "503" } });
+  const response = await fetch(`${baseUrl}/me`, {
+    headers: { ...authHeaders, "X-Mock-Status": "503" },
+  });
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { code: "MOCK_503" });
 });
@@ -139,10 +152,15 @@ test("returns the complete Apifox gym grade shape", async () => {
 
 test("keeps points and exchanged goods consistent", async () => {
   const before = (await (await fetch(`${baseUrl}/jifen`, { headers: authHeaders })).json()).data;
-  const exchange = await fetch(`${baseUrl}/jifen/goods/1`, { method: "POST", headers: authHeaders });
+  const exchange = await fetch(`${baseUrl}/jifen/goods/1`, {
+    method: "POST",
+    headers: authHeaders,
+  });
   assert.equal(exchange.status, 200);
   const after = (await (await fetch(`${baseUrl}/jifen`, { headers: authHeaders })).json()).data;
-  const exchanged = (await (await fetch(`${baseUrl}/jifen/goods/exchanged`, { headers: authHeaders })).json()).data;
+  const exchanged = (
+    await (await fetch(`${baseUrl}/jifen/goods/exchanged`, { headers: authHeaders })).json()
+  ).data;
   assert.equal(after.jifen, before.jifen - 200);
   assert.equal(exchanged[0].goods_name, "校园文创笔记本");
 });
@@ -158,7 +176,8 @@ test("stores anonymous feedback for a complete preview flow", async () => {
     }),
   });
   assert.equal(create.status, 200);
-  const feedback = (await (await fetch(`${baseUrl}/feedback`, { headers: authHeaders })).json()).data;
+  const feedback = (await (await fetch(`${baseUrl}/feedback`, { headers: authHeaders })).json())
+    .data;
   assert.ok(feedback.items.some((item) => item.description === "匿名反馈测试"));
 });
 
@@ -179,8 +198,12 @@ test("validates required login parameters", async () => {
 });
 
 test("filters campus card records with documented enum values", async () => {
-  const consumption = await fetch(`${baseUrl}/card/record?year=2026&month=9&type=consumption`, { headers: authHeaders });
-  const recharge = await fetch(`${baseUrl}/card/record?year=2026&month=9&type=recharge`, { headers: authHeaders });
+  const consumption = await fetch(`${baseUrl}/card/record?year=2026&month=9&type=consumption`, {
+    headers: authHeaders,
+  });
+  const recharge = await fetch(`${baseUrl}/card/record?year=2026&month=9&type=recharge`, {
+    headers: authHeaders,
+  });
   assert.equal((await consumption.json()).data.count, 2);
   assert.equal((await recharge.json()).data.count, 0);
 });

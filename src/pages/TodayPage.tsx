@@ -47,22 +47,44 @@ export default function TodayPage() {
     queryFn: () => api.me.setting<IndexCardSetting>("index_card"),
     enabled: isAuthenticated,
   });
-  const points = useQuery({ queryKey: ["points"], queryFn: api.points.summary, enabled: isAuthenticated });
-  const electricity = useQuery({ queryKey: ["dorm", "electricity"], queryFn: api.dorm.electricity, enabled: isAuthenticated });
-  const announcements = useQuery({ queryKey: ["announcements"], queryFn: api.announcement.list, enabled: isAuthenticated });
+  const points = useQuery({
+    queryKey: ["points"],
+    queryFn: api.points.summary,
+    enabled: isAuthenticated,
+  });
+  const electricity = useQuery({
+    queryKey: ["dorm", "electricity"],
+    queryFn: api.dorm.electricity,
+    enabled: isAuthenticated,
+  });
+  const announcements = useQuery({
+    queryKey: ["announcements"],
+    queryFn: api.announcement.list,
+    enabled: isAuthenticated,
+  });
   const grades = useQuery({
     queryKey: ["grades", 2026, "autumn"],
     queryFn: () => api.grade.list(2026, "autumn"),
     enabled: isAuthenticated,
   });
-  const email = useQuery({ queryKey: ["email", "unread"], queryFn: api.email.unread, enabled: isAuthenticated });
+  const email = useQuery({
+    queryKey: ["email", "unread"],
+    queryFn: api.email.unread,
+    enabled: isAuthenticated,
+  });
 
   if (!isAuthenticated) {
     return (
       <div className="page">
         <PageHeader title="微生活" description={formatDate(new Date())} />
         <div className="hero-image">
-          <img src={CAMPUS_IMAGE} width="800" height="450" alt="清晨的湖南大学校园" fetchPriority="high" />
+          <img
+            src={CAMPUS_IMAGE}
+            width="800"
+            height="450"
+            alt="清晨的湖南大学校园"
+            fetchPriority="high"
+          />
           <div className="hero-image__caption">
             <h2>校园生活，从今天开始</h2>
           </div>
@@ -80,14 +102,21 @@ export default function TodayPage() {
 
   const queries = [semester, courses, exams, notices, cards];
   if (queries.some((query) => query.isPending)) {
-    return <div className="page"><PageSkeleton rows={6} /></div>;
+    return (
+      <div className="page">
+        <PageSkeleton rows={6} />
+      </div>
+    );
   }
   const failed = queries.find((query) => query.isError);
   if (failed) {
     return (
       <div className="page">
         <PageHeader title="今日" />
-        <PageError error={failed.error} onRetry={() => void Promise.all(queries.map((query) => query.refetch()))} />
+        <PageError
+          error={failed.error}
+          onRetry={() => void Promise.all(queries.map((query) => query.refetch()))}
+        />
       </div>
     );
   }
@@ -101,39 +130,84 @@ export default function TodayPage() {
   const day = currentWeekday(today);
   const tomorrowDay = currentWeekday(tomorrow);
   const todayCourses = isDateInSemester(semester.data!, today)
-    ? courses.data!
-      .filter((course) => course.day === day && course.weeks.includes(week))
-      .toSorted((left, right) => left.time - right.time)
+    ? courses
+        .data!.filter((course) => course.day === day && course.weeks.includes(week))
+        .toSorted((left, right) => left.time - right.time)
     : [];
   const tomorrowCourses = isDateInSemester(semester.data!, tomorrow)
-    ? courses.data!
-      .filter((course) => course.day === tomorrowDay && course.weeks.includes(tomorrowWeek))
-      .toSorted((left, right) => left.time - right.time)
+    ? courses
+        .data!.filter((course) => course.day === tomorrowDay && course.weeks.includes(tomorrowWeek))
+        .toSorted((left, right) => left.time - right.time)
     : [];
-  const upcomingExam = exams.data!.find((exam) => exam.date && new Date(`${exam.date}T23:59:59`) >= new Date());
+  const upcomingExam = exams.data!.find(
+    (exam) => exam.date && new Date(`${exam.date}T23:59:59`) >= new Date(),
+  );
   const configuredCards = cards.data!.setting.cards;
   const overviewCards = configuredCards.filter((card) => !["course", "tasks"].includes(card));
 
   function overviewRow(card: IndexCardKey): ReactNode {
     switch (card) {
       case "jifen":
-        return <Link className="data-row" to="/services/points"><span>积分与签到</span><strong>{points.data ? `${points.data.jifen} 分 · 连续 ${points.data.combo} 天${points.data.is_checked ? " · 已签到" : ""}` : "暂不可用"}</strong></Link>;
+        return (
+          <Link className="data-row" to="/services/points">
+            <span>积分与签到</span>
+            <strong>
+              {points.data
+                ? `${points.data.jifen} 分 · 连续 ${points.data.combo} 天${points.data.is_checked ? " · 已签到" : ""}`
+                : "暂不可用"}
+            </strong>
+          </Link>
+        );
       case "electricity":
-        return <Link className="data-row" to="/services/dorm"><span>宿舍电量</span><strong>{electricity.data?.balance || "暂不可用"}</strong></Link>;
+        return (
+          <Link className="data-row" to="/services/dorm">
+            <span>宿舍电量</span>
+            <strong>{electricity.data?.balance || "暂不可用"}</strong>
+          </Link>
+        );
       case "campus":
-        return <Link className="data-row" to="/services/announcements"><span>校园动态</span><strong className="text-clamp-2">{announcements.data?.[0]?.title || "暂无公告"}</strong></Link>;
+        return (
+          <Link className="data-row" to="/services/announcements">
+            <span>校园动态</span>
+            <strong className="text-clamp-2">{announcements.data?.[0]?.title || "暂无公告"}</strong>
+          </Link>
+        );
       case "count_down": {
         const days = upcomingExam?.date
-          ? Math.max(0, Math.ceil((new Date(`${upcomingExam.date}T00:00:00`).getTime() - Date.now()) / 86_400_000))
+          ? Math.max(
+              0,
+              Math.ceil(
+                (new Date(`${upcomingExam.date}T00:00:00`).getTime() - Date.now()) / 86_400_000,
+              ),
+            )
           : null;
-        return <Link className="data-row" to="/services/exams"><span>考试倒计时</span><strong>{days === null ? "暂无考试" : `${days} 天`}</strong></Link>;
+        return (
+          <Link className="data-row" to="/services/exams">
+            <span>考试倒计时</span>
+            <strong>{days === null ? "暂无考试" : `${days} 天`}</strong>
+          </Link>
+        );
       }
       case "grade": {
         const latest = grades.data?.[0];
-        return <Link className="data-row" to="/services/grades"><span>最新成绩</span><strong>{latest ? `${latest.course_name} ${latest.score} · GPA ${latest.gpa ?? "—"}` : "暂无成绩"}</strong></Link>;
+        return (
+          <Link className="data-row" to="/services/grades">
+            <span>最新成绩</span>
+            <strong>
+              {latest
+                ? `${latest.course_name} ${latest.score} · GPA ${latest.gpa ?? "—"}`
+                : "暂无成绩"}
+            </strong>
+          </Link>
+        );
       }
       case "email":
-        return <div className="data-row"><span>校内邮箱</span><strong>{email.data ? `${email.data.count} 封未读` : "暂不可用"}</strong></div>;
+        return (
+          <div className="data-row">
+            <span>校内邮箱</span>
+            <strong>{email.data ? `${email.data.count} 封未读` : "暂不可用"}</strong>
+          </div>
+        );
       default:
         return null;
     }
@@ -143,9 +217,17 @@ export default function TodayPage() {
     <div className="page">
       <PageHeader
         title={formatDateHeading(now)}
-        description={<>{semester.data!.xn} {termName(semester.data!.xq)} · <strong>第 {week} 周</strong></>}
+        description={
+          <>
+            {semester.data!.xn} {termName(semester.data!.xq)} · <strong>第 {week} 周</strong>
+          </>
+        }
         leadingAction={
-          <Link className="icon-button" to="/notices" aria-label={`${notices.data!.count} 条未读通知`}>
+          <Link
+            className="icon-button"
+            to="/notices"
+            aria-label={`${notices.data!.count} 条未读通知`}
+          >
             <Bell aria-hidden="true" />
           </Link>
         }
@@ -167,7 +249,9 @@ export default function TodayPage() {
           {configuredCards.includes("tasks") && upcomingExam ? (
             <Link className="data-row" to="/services/exams">
               <div className="min-w-0">
-                <p className="data-row__label">{upcomingExam.date ? formatDate(upcomingExam.date) : "日期待定"}</p>
+                <p className="data-row__label">
+                  {upcomingExam.date ? formatDate(upcomingExam.date) : "日期待定"}
+                </p>
                 <strong className="text-clamp-2">{upcomingExam.course_name}</strong>
               </div>
               <span className="badge badge--warning">考试</span>
@@ -185,7 +269,9 @@ export default function TodayPage() {
       {overviewCards.length ? (
         <Section title="校园速览" description={`按首页设置展示 · 版本 ${cards.data!.version}`}>
           <div className="surface list">
-            {overviewCards.map((card) => <div key={card}>{overviewRow(card)}</div>)}
+            {overviewCards.map((card) => (
+              <div key={card}>{overviewRow(card)}</div>
+            ))}
           </div>
         </Section>
       ) : null}

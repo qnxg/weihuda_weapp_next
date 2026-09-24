@@ -11,10 +11,12 @@ import {
 
 describe("calendar formatting", () => {
   it("calculates a one-based semester week", () => {
-    expect(getCurrentWeek(
-      { xn: 2026, xq: "autumn", start: "2026-09-13", weeks: 16, from_zero: false },
-      new Date("2026-09-22T12:00:00"),
-    )).toBe(2);
+    expect(
+      getCurrentWeek(
+        { xn: 2026, xq: "autumn", start: "2026-09-13", weeks: 16, from_zero: false },
+        new Date("2026-09-22T12:00:00"),
+      ),
+    ).toBe(2);
   });
 
   it("supports zero-based semester numbering and clamps the range", () => {

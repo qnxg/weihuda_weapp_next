@@ -36,9 +36,10 @@ export default function RoomsPage() {
       .filter(Boolean);
     const nextErrors = {
       building: building ? "" : "请输入教学楼编号。",
-      time: timeParts.length > 0 && timeParts.every((item) => /^[1-9]\d*$/.test(item))
-        ? ""
-        : "请用逗号分隔有效节次，例如 1,2。",
+      time:
+        timeParts.length > 0 && timeParts.every((item) => /^[1-9]\d*$/.test(item))
+          ? ""
+          : "请用逗号分隔有效节次，例如 1,2。",
     };
     setFieldErrors(nextErrors);
     if (nextErrors.building || nextErrors.time) {
@@ -72,11 +73,22 @@ export default function RoomsPage() {
             aria-describedby={fieldErrors.building ? "room-building-error" : undefined}
             onChange={() => setFieldErrors((value) => ({ ...value, building: "" }))}
           />
-          {fieldErrors.building ? <p className="field-error" id="room-building-error">{fieldErrors.building}</p> : null}
+          {fieldErrors.building ? (
+            <p className="field-error" id="room-building-error">
+              {fieldErrors.building}
+            </p>
+          ) : null}
         </div>
         <div className="field">
           <label htmlFor="room-date">日期</label>
-          <input id="room-date" name="date" type="date" lang="zh-CN" required defaultValue={localDateValue()} />
+          <input
+            id="room-date"
+            name="date"
+            type="date"
+            lang="zh-CN"
+            required
+            defaultValue={localDateValue()}
+          />
         </div>
         <div className="field">
           <label htmlFor="room-time">节次</label>
@@ -92,28 +104,52 @@ export default function RoomsPage() {
             aria-describedby={fieldErrors.time ? "room-time-error" : undefined}
             onChange={() => setFieldErrors((value) => ({ ...value, time: "" }))}
           />
-          {fieldErrors.time ? <p className="field-error" id="room-time-error">{fieldErrors.time}</p> : null}
+          {fieldErrors.time ? (
+            <p className="field-error" id="room-time-error">
+              {fieldErrors.time}
+            </p>
+          ) : null}
         </div>
-        <button className="button button--primary button--block" type="submit" disabled={rooms.isFetching}>
-          <Search aria-hidden="true" />{rooms.isFetching ? "正在查询…" : "查询空教室"}
+        <button
+          className="button button--primary button--block"
+          type="submit"
+          disabled={rooms.isFetching}
+        >
+          <Search aria-hidden="true" />
+          {rooms.isFetching ? "正在查询…" : "查询空教室"}
         </button>
       </form>
 
       <Section title="查询结果">
-        {!filter ? <EmptyState title="设置查询条件" description="选择日期与节次后查询可用教室。" icon={Building2} /> : null}
+        {!filter ? (
+          <EmptyState
+            title="设置查询条件"
+            description="选择日期与节次后查询可用教室。"
+            icon={Building2}
+          />
+        ) : null}
         {rooms.isPending && filter ? <PageSkeleton rows={4} /> : null}
-        {rooms.isError ? <PageError error={rooms.error} onRetry={() => void rooms.refetch()} /> : null}
+        {rooms.isError ? (
+          <PageError error={rooms.error} onRetry={() => void rooms.refetch()} />
+        ) : null}
         {rooms.data?.length ? (
           <div className="surface list">
             {rooms.data.map((room) => (
               <article className="record-item" key={room.room_name}>
-                <div className="cluster spread gap-12"><h3>{room.room_name}</h3><span className="badge">{room.room_type}</span></div>
-                <p className="muted text-sm">普通座位 {room.seat_count} · 考试座位 {room.exam_seat_count}</p>
+                <div className="cluster spread gap-12">
+                  <h3>{room.room_name}</h3>
+                  <span className="badge">{room.room_type}</span>
+                </div>
+                <p className="muted text-sm">
+                  普通座位 {room.seat_count} · 考试座位 {room.exam_seat_count}
+                </p>
               </article>
             ))}
           </div>
         ) : null}
-        {rooms.data && rooms.data.length === 0 ? <EmptyState title="没有可用教室" description="尝试调整教学楼、日期或节次。" /> : null}
+        {rooms.data && rooms.data.length === 0 ? (
+          <EmptyState title="没有可用教室" description="尝试调整教学楼、日期或节次。" />
+        ) : null}
       </Section>
     </div>
   );

@@ -3,17 +3,37 @@ import { CheckCircle2, Flame, Gift } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/api";
 import type { Goods } from "../../api/types";
-import { ConfirmDialog, EmptyState, PageError, PageHeader, PageSkeleton, Section, StatusMessage } from "../../components/ui";
+import {
+  ConfirmDialog,
+  EmptyState,
+  PageError,
+  PageHeader,
+  PageSkeleton,
+  Section,
+  StatusMessage,
+} from "../../components/ui";
 import { formatDateTime, formatNumber } from "../../utils/format";
 
 function GoodsImage({ src, alt }: { src: string; alt: string }) {
   const [failed, setFailed] = useState(false);
   return failed ? (
-    <span className="goods-item__cover goods-item__cover--fallback" role="img" aria-label={`${alt}图片暂不可用`}>
+    <span
+      className="goods-item__cover goods-item__cover--fallback"
+      role="img"
+      aria-label={`${alt}图片暂不可用`}
+    >
       <Gift aria-hidden="true" />
     </span>
   ) : (
-    <img className="goods-item__cover" src={src} width="56" height="56" loading="lazy" alt={alt} onError={() => setFailed(true)} />
+    <img
+      className="goods-item__cover"
+      src={src}
+      width="56"
+      height="56"
+      loading="lazy"
+      alt={alt}
+      onError={() => setFailed(true)}
+    />
   );
 }
 
@@ -23,7 +43,10 @@ export default function PointsPage() {
   const [recordSize, setRecordSize] = useState(20);
   const [message, setMessage] = useState("");
   const summary = useQuery({ queryKey: ["points"], queryFn: api.points.summary });
-  const description = useQuery({ queryKey: ["points", "description"], queryFn: api.points.description });
+  const description = useQuery({
+    queryKey: ["points", "description"],
+    queryFn: api.points.description,
+  });
   const records = useQuery({
     queryKey: ["points", "records", recordSize],
     queryFn: () => api.points.records(1, recordSize),
@@ -55,13 +78,21 @@ export default function PointsPage() {
   });
   const queries = [summary, description, records, goods, exchanged];
 
-  if (queries.some((query) => query.isPending)) return <div className="page"><PageSkeleton rows={8} /></div>;
+  if (queries.some((query) => query.isPending))
+    return (
+      <div className="page">
+        <PageSkeleton rows={8} />
+      </div>
+    );
   const failed = queries.find((query) => query.isError);
   if (failed) {
     return (
       <div className="page">
         <PageHeader title="积分中心" back />
-        <PageError error={failed.error} onRetry={() => void Promise.all(queries.map((query) => query.refetch()))} />
+        <PageError
+          error={failed.error}
+          onRetry={() => void Promise.all(queries.map((query) => query.refetch()))}
+        />
       </div>
     );
   }
@@ -74,15 +105,25 @@ export default function PointsPage() {
         <div>
           <p className="muted text-sm">可用积分</p>
           <p className="summary-band__value">{formatNumber(summary.data!.jifen)}</p>
-          <p className="muted text-sm cluster gap-4"><Flame aria-hidden="true" />连续 {summary.data!.combo} 天</p>
+          <p className="muted text-sm cluster gap-4">
+            <Flame aria-hidden="true" />
+            连续 {summary.data!.combo} 天
+          </p>
         </div>
-        <button className="button button--primary" type="button" disabled={summary.data!.is_checked || checkIn.isPending} onClick={() => checkIn.mutate()}>
+        <button
+          className="button button--primary"
+          type="button"
+          disabled={summary.data!.is_checked || checkIn.isPending}
+          onClick={() => checkIn.mutate()}
+        >
           <CheckCircle2 aria-hidden="true" />
           {checkIn.isPending ? "签到中…" : summary.data!.is_checked ? "今日已签到" : "签到"}
         </button>
       </div>
       {message ? <StatusMessage tone="success">{message}</StatusMessage> : null}
-      {checkIn.isError ? <StatusMessage tone="danger">{checkIn.error.message}</StatusMessage> : null}
+      {checkIn.isError ? (
+        <StatusMessage tone="danger">{checkIn.error.message}</StatusMessage>
+      ) : null}
 
       <Section title="积分好物">
         {goods.data!.length ? (
@@ -100,13 +141,22 @@ export default function PointsPage() {
                   </div>
                   <div className="cluster spread">
                     <span className="muted text-sm">库存 {item.count}</span>
-                    <button className="button button--secondary button--small" type="button" disabled={item.count <= 0} onClick={() => setSelectedGoods(item)}>兑换</button>
+                    <button
+                      className="button button--secondary button--small"
+                      type="button"
+                      disabled={item.count <= 0}
+                      onClick={() => setSelectedGoods(item)}
+                    >
+                      兑换
+                    </button>
                   </div>
                 </div>
               </article>
             ))}
           </div>
-        ) : <EmptyState title="暂无可兑换奖品" description="新的积分好物会在这里上架。" icon={Gift} />}
+        ) : (
+          <EmptyState title="暂无可兑换奖品" description="新的积分好物会在这里上架。" icon={Gift} />
+        )}
       </Section>
 
       <Section title="积分记录" description={`共 ${records.data!.total} 条`}>
@@ -118,15 +168,25 @@ export default function PointsPage() {
                   <h3>{record.description}</h3>
                   <time className="muted text-sm">{formatDateTime(record.created_at)}</time>
                 </div>
-                <strong className={record.jifen >= 0 ? "text-success tabular" : "text-danger tabular"}>
-                  {record.jifen >= 0 ? "+" : ""}{record.jifen}
+                <strong
+                  className={record.jifen >= 0 ? "text-success tabular" : "text-danger tabular"}
+                >
+                  {record.jifen >= 0 ? "+" : ""}
+                  {record.jifen}
                 </strong>
               </div>
             ))}
           </div>
-        ) : <EmptyState title="暂无积分记录" description="签到或兑换后会生成积分流水。" />}
+        ) : (
+          <EmptyState title="暂无积分记录" description="签到或兑换后会生成积分流水。" />
+        )}
         {records.data!.total > records.data!.records.length ? (
-          <button className="button button--secondary button--block" type="button" disabled={records.isFetching} onClick={() => setRecordSize((size) => size + 20)}>
+          <button
+            className="button button--secondary button--block"
+            type="button"
+            disabled={records.isFetching}
+            onClick={() => setRecordSize((size) => size + 20)}
+          >
             {records.isFetching ? "正在加载…" : "加载更多记录"}
           </button>
         ) : null}
@@ -142,14 +202,18 @@ export default function PointsPage() {
                   <h3>{item.goods_name}</h3>
                   <p className="muted text-sm">{item.goods_description}</p>
                   <p className="muted text-sm">兑换于 {formatDateTime(item.created_at)}</p>
-                  <span className={`badge ${item.receive_time ? "badge--success" : "badge--warning"}`}>
+                  <span
+                    className={`badge ${item.receive_time ? "badge--success" : "badge--warning"}`}
+                  >
                     {item.receive_time ? `已领取 · ${formatDateTime(item.receive_time)}` : "待领取"}
                   </span>
                 </div>
               </article>
             ))}
           </div>
-        ) : <EmptyState title="还没有兑换记录" description="兑换成功的奖品会显示在这里。" />}
+        ) : (
+          <EmptyState title="还没有兑换记录" description="兑换成功的奖品会显示在这里。" />
+        )}
       </Section>
 
       {selectedGoods ? (

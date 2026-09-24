@@ -83,21 +83,48 @@ export default function TfaPage() {
           <p className="muted">完成验证后会返回刚才的页面。</p>
         </div>
         {!codeSent ? (
-          <button className="button button--primary button--block" type="button" disabled={send.isPending} onClick={() => send.mutate()}>
+          <button
+            className="button button--primary button--block"
+            type="button"
+            disabled={send.isPending}
+            onClick={() => send.mutate()}
+          >
             {send.isPending ? "正在发送…" : "发送验证码"}
           </button>
         ) : (
           <form className="form" onSubmit={submit}>
             <div className="field">
               <label htmlFor="tfa-code">短信验证码</label>
-              <input id="tfa-code" name="code" inputMode="numeric" autoComplete="one-time-code" spellCheck={false} placeholder="输入 6 位验证码…" aria-invalid={Boolean(error)} aria-describedby={error ? "tfa-error" : undefined} />
+              <input
+                id="tfa-code"
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                spellCheck={false}
+                placeholder="输入 6 位验证码…"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "tfa-error" : undefined}
+              />
             </div>
             {info ? <StatusMessage>{info}</StatusMessage> : null}
-            {error ? <StatusMessage tone="danger"><span id="tfa-error">{error}</span></StatusMessage> : null}
-            <button className="button button--primary button--block" type="submit" disabled={verify.isPending}>
+            {error ? (
+              <StatusMessage tone="danger">
+                <span id="tfa-error">{error}</span>
+              </StatusMessage>
+            ) : null}
+            <button
+              className="button button--primary button--block"
+              type="submit"
+              disabled={verify.isPending}
+            >
               {verify.isPending ? "正在验证…" : "完成验证"}
             </button>
-            <button className="button button--secondary button--block" type="button" disabled={send.isPending} onClick={() => send.mutate()}>
+            <button
+              className="button button--secondary button--block"
+              type="button"
+              disabled={send.isPending}
+              onClick={() => send.mutate()}
+            >
               {send.isPending ? "正在发送…" : "重新发送"}
             </button>
           </form>

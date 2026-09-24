@@ -38,9 +38,10 @@ export function TodayCourses({
   const sessions = selectedDay === "today" ? todaySessions : tomorrowSessions;
   const courseDate = selectedDay === "today" ? today : tomorrow;
   const emptyTitle = selectedDay === "today" ? "今天没有课程" : "明天没有课程";
-  const emptyDescription = selectedDay === "today"
-    ? "可以切换到明日课程，或前往课表查看其他日期。"
-    : "可以返回今日课程，或前往课表查看本周安排。";
+  const emptyDescription =
+    selectedDay === "today"
+      ? "可以切换到明日课程，或前往课表查看其他日期。"
+      : "可以返回今日课程，或前往课表查看本周安排。";
 
   function selectDay(day: SelectedDay) {
     setManualSelection(day);
@@ -59,7 +60,9 @@ export function TodayCourses({
 
   return (
     <section className="section today-courses stack gap-12" aria-labelledby="today-courses-heading">
-      <h2 className="sr-only" id="today-courses-heading">今日与明日课程</h2>
+      <h2 className="sr-only" id="today-courses-heading">
+        今日与明日课程
+      </h2>
       <div className="course-day-tabs" role="tablist" aria-label="选择课程日期">
         <button
           className={`course-day-tab${selectedDay === "today" ? " is-active" : ""}`}
@@ -113,7 +116,9 @@ export function TodayCourses({
                   <span className="course-card__stripe" aria-hidden="true" />
                   <div className="course-card__content">
                     <div className="course-card__row course-card__row--primary">
-                      <time className="course-card__time" dateTime={times?.start}>{times?.start ?? "--:--"}</time>
+                      <time className="course-card__time" dateTime={times?.start}>
+                        {times?.start ?? "--:--"}
+                      </time>
                       <div className="course-card__title">
                         <h3 className="text-clamp-2">{course.course_name}</h3>
                         {showStatus ? (
@@ -122,12 +127,15 @@ export function TodayCourses({
                       </div>
                     </div>
                     <div className="course-card__row course-card__row--meta">
-                      <time className="course-card__time" dateTime={times?.end}>{times?.end ?? "--:--"}</time>
+                      <time className="course-card__time" dateTime={times?.end}>
+                        {times?.end ?? "--:--"}
+                      </time>
                       <p
                         className="course-card__meta"
                         title={`${courseSessionPeriodLabel(session)} | ${course.place || "地点待定"} | ${course.teacher || "教师待定"}`}
                       >
-                        {courseSessionPeriodLabel(session)} | {course.place || "地点待定"} | {course.teacher || "教师待定"}
+                        {courseSessionPeriodLabel(session)} | {course.place || "地点待定"} |{" "}
+                        {course.teacher || "教师待定"}
                       </p>
                     </div>
                   </div>
@@ -140,7 +148,11 @@ export function TodayCourses({
             title={emptyTitle}
             description={emptyDescription}
             icon={CalendarClock}
-            action={<Link className="button button--secondary" to="/schedule">查看本周</Link>}
+            action={
+              <Link className="button button--secondary" to="/schedule">
+                查看本周
+              </Link>
+            }
           />
         )}
       </div>

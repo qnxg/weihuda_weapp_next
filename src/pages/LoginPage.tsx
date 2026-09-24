@@ -60,7 +60,9 @@ export default function LoginPage() {
       <div className="login-content">
         <div className="cluster spread">
           <div className="login-brand">
-            <span className="login-brand__mark" aria-hidden="true">微</span>
+            <span className="login-brand__mark" aria-hidden="true">
+              微
+            </span>
             <strong>微生活</strong>
           </div>
           <Link className="icon-button" to="/" aria-label="返回应用">
@@ -88,7 +90,11 @@ export default function LoginPage() {
               aria-describedby={fieldErrors.stuId ? "stu-id-error" : undefined}
               onChange={() => setFieldErrors((value) => ({ ...value, stuId: "" }))}
             />
-            {fieldErrors.stuId ? <p className="field-error" id="stu-id-error">{fieldErrors.stuId}</p> : null}
+            {fieldErrors.stuId ? (
+              <p className="field-error" id="stu-id-error">
+                {fieldErrors.stuId}
+              </p>
+            ) : null}
           </div>
           <div className="field">
             <label htmlFor="password">密码</label>
@@ -102,7 +108,11 @@ export default function LoginPage() {
               aria-describedby={fieldErrors.password ? "password-error" : undefined}
               onChange={() => setFieldErrors((value) => ({ ...value, password: "" }))}
             />
-            {fieldErrors.password ? <p className="field-error" id="password-error">{fieldErrors.password}</p> : null}
+            {fieldErrors.password ? (
+              <p className="field-error" id="password-error">
+                {fieldErrors.password}
+              </p>
+            ) : null}
           </div>
           {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
           <button className="button button--primary button--block" type="submit" disabled={pending}>

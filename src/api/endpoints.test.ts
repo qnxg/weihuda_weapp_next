@@ -13,9 +13,7 @@ describe("endpoint catalog", () => {
   });
 
   it("matches every mock server route", () => {
-    const clientKeys = endpointCatalog
-      .map(({ method, path }) => `${method} ${path}`)
-      .toSorted();
+    const clientKeys = endpointCatalog.map(({ method, path }) => `${method} ${path}`).toSorted();
     const mockKeys = routes
       .map(({ method, path }: { method: string; path: string }) => `${method} ${path}`)
       .toSorted();

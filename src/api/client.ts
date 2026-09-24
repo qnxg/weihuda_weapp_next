@@ -50,7 +50,12 @@ export class ApiError extends Error {
       code === "TFA" && details && typeof details === "object" && "phone" in details
         ? `需要短信验证，验证码将发送至 ${String(details.phone)}。`
         : "";
-    super(tfaPhone || errorMessages[code] || detailMessage || (status >= 500 ? "服务暂时不可用，请稍后重试。" : "请求未完成，请检查后重试。"));
+    super(
+      tfaPhone ||
+        errorMessages[code] ||
+        detailMessage ||
+        (status >= 500 ? "服务暂时不可用，请稍后重试。" : "请求未完成，请检查后重试。"),
+    );
     this.name = "ApiError";
   }
 }
@@ -139,7 +144,10 @@ function handleTfa(payload: ApiEnvelope<unknown>, status: number): never {
   if (!getTfaChallenge()) {
     setTfaChallenge({
       phone,
-      returnTo: typeof window === "undefined" ? "/" : `${window.location.pathname}${window.location.search}`,
+      returnTo:
+        typeof window === "undefined"
+          ? "/"
+          : `${window.location.pathname}${window.location.search}`,
     });
   }
   throw new ApiError("TFA", status, payload.data);
@@ -150,14 +158,19 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     ...options,
     headers: createHeaders(options),
     body:
-      options.body === undefined || options.body instanceof FormData || options.body instanceof URLSearchParams
+      options.body === undefined ||
+      options.body instanceof FormData ||
+      options.body instanceof URLSearchParams
         ? options.body
         : JSON.stringify(options.body),
   });
 
   const excludesRefresh = path === "/auth/login" || path === "/auth/refresh";
   if (response.status === 401 && options.auth !== false && !excludesRefresh) {
-    const payload = await response.clone().json().catch(() => null) as ApiEnvelope<unknown> | null;
+    const payload = (await response
+      .clone()
+      .json()
+      .catch(() => null)) as ApiEnvelope<unknown> | null;
     if (payload?.code === "TFA") {
       handleTfa(payload, response.status);
     }

@@ -64,9 +64,9 @@ export function groupCourseSessions(courses: readonly Course[]): CourseSession[]
 
   const sessions: CourseSession[] = [];
   for (const matchingCourses of coursesByIdentity.values()) {
-    const uniquePeriods = [...new Map(
-      matchingCourses.map((course) => [course.time, course]),
-    ).values()].toSorted((left, right) => left.time - right.time);
+    const uniquePeriods = [
+      ...new Map(matchingCourses.map((course) => [course.time, course])).values(),
+    ].toSorted((left, right) => left.time - right.time);
 
     let currentSession: CourseSession | undefined;
     for (const course of uniquePeriods) {
@@ -79,10 +79,12 @@ export function groupCourseSessions(courses: readonly Course[]): CourseSession[]
     }
   }
 
-  return sessions.toSorted((left, right) =>
-    left.startPeriod - right.startPeriod
-    || left.endPeriod - right.endPeriod
-    || left.course.course_name.localeCompare(right.course.course_name, "zh-CN"));
+  return sessions.toSorted(
+    (left, right) =>
+      left.startPeriod - right.startPeriod ||
+      left.endPeriod - right.endPeriod ||
+      left.course.course_name.localeCompare(right.course.course_name, "zh-CN"),
+  );
 }
 
 export function courseSessionPeriodLabel(session: CourseSession) {
@@ -129,6 +131,8 @@ export function shouldDefaultToTomorrow(
   today: Date,
   now = new Date(),
 ) {
-  return sessions.length > 0
-    && sessions.every((session) => getCourseStatus(session, today, now) === "completed");
+  return (
+    sessions.length > 0 &&
+    sessions.every((session) => getCourseStatus(session, today, now) === "completed")
+  );
 }

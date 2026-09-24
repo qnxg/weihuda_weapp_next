@@ -13,7 +13,9 @@ describe("AuthProvider", () => {
     setSession({ access_token: "active", refresh_token: "refresh" });
     render(
       <QueryClientProvider client={client}>
-        <AuthProvider><div>content</div></AuthProvider>
+        <AuthProvider>
+          <div>content</div>
+        </AuthProvider>
       </QueryClientProvider>,
     );
 

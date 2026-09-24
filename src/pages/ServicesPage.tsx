@@ -49,8 +49,20 @@ const groups = [
     tone: "amber",
     items: [
       { id: "points", title: "积分中心", meta: "签到、记录与奖品", icon: Gift },
-      { id: "feedback", title: "问题反馈", meta: "提交问题并跟踪进度", icon: HelpCircle, public: true },
-      { id: "about", title: "关于微生活", meta: "版本与项目链接", icon: BookOpenCheck, public: true },
+      {
+        id: "feedback",
+        title: "问题反馈",
+        meta: "提交问题并跟踪进度",
+        icon: HelpCircle,
+        public: true,
+      },
+      {
+        id: "about",
+        title: "关于微生活",
+        meta: "版本与项目链接",
+        icon: BookOpenCheck,
+        public: true,
+      },
     ],
   },
 ];
@@ -76,13 +88,19 @@ export default function ServicesPage() {
             </div>
             <div className="cluster gap-8">
               <Mail aria-hidden="true" />
-              <strong className="summary-band__value">{email.isPending ? "…" : email.data?.count ?? "—"}</strong>
+              <strong className="summary-band__value">
+                {email.isPending ? "…" : (email.data?.count ?? "—")}
+              </strong>
             </div>
           </div>
           {email.isError ? (
             <div className="cluster spread gap-8">
               <StatusMessage tone="warning">{email.error.message}</StatusMessage>
-              <button className="button button--ghost button--small" type="button" onClick={() => void email.refetch()}>
+              <button
+                className="button button--ghost button--small"
+                type="button"
+                onClick={() => void email.refetch()}
+              >
                 <RotateCcw aria-hidden="true" />
                 重试
               </button>
@@ -95,13 +113,19 @@ export default function ServicesPage() {
         <Section title={group.title} key={group.title}>
           <div className="service-grid">
             {group.items.map(({ id, title, meta, icon: Icon, public: isPublic }) => (
-              <Link className="service-item" key={id} to={id === "feedback" || id === "about" ? `/${id}` : `/services/${id}`}>
+              <Link
+                className="service-item"
+                key={id}
+                to={id === "feedback" || id === "about" ? `/${id}` : `/services/${id}`}
+              >
                 <span className={`service-item__icon service-item__icon--${group.tone}`}>
                   <Icon aria-hidden="true" />
                 </span>
                 <span className="service-item__title text-clamp-2">{title}</span>
                 <span className="service-item__meta text-clamp-2">{meta}</span>
-                {!isAuthenticated && !isPublic ? <LockKeyhole className="service-item__lock" aria-label="需要登录" /> : null}
+                {!isAuthenticated && !isPublic ? (
+                  <LockKeyhole className="service-item__lock" aria-label="需要登录" />
+                ) : null}
               </Link>
             ))}
           </div>

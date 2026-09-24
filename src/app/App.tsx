@@ -55,7 +55,9 @@ function NotFoundPage() {
     <div className="page">
       <h1>页面不存在</h1>
       <p className="muted">这个地址没有对应的校园服务。</p>
-      <Link className="button button--primary" to="/">返回今日</Link>
+      <Link className="button button--primary" to="/">
+        返回今日
+      </Link>
     </div>
   );
 }
@@ -67,10 +69,23 @@ export default function App() {
         <BrowserRouter>
           <TfaRedirect />
           <AppErrorBoundary>
-            <Suspense fallback={<div className="page"><PageSkeleton rows={6} /></div>}>
+            <Suspense
+              fallback={
+                <div className="page">
+                  <PageSkeleton rows={6} />
+                </div>
+              }
+            >
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/tfa" element={<Protected><TfaPage /></Protected>} />
+                <Route
+                  path="/tfa"
+                  element={
+                    <Protected>
+                      <TfaPage />
+                    </Protected>
+                  }
+                />
                 <Route element={<AppShell />}>
                   <Route index element={<TodayPage />} />
                   <Route path="schedule" element={<SchedulePage />} />
@@ -78,18 +93,102 @@ export default function App() {
                   <Route path="me" element={<ProfilePage />} />
                   <Route path="feedback" element={<FeedbackPage />} />
                   <Route path="about" element={<AboutPage />} />
-                  <Route path="notices" element={<Protected><NoticesPage /></Protected>} />
-                  <Route path="settings" element={<Protected><SettingsPage /></Protected>} />
-                  <Route path="services/card" element={<Protected><CardPage /></Protected>} />
-                  <Route path="services/grades" element={<Protected><GradesPage /></Protected>} />
-                  <Route path="services/points" element={<Protected><PointsPage /></Protected>} />
-                  <Route path="services/dorm" element={<Protected><DormPage /></Protected>} />
-                  <Route path="services/network" element={<Protected><NetworkPage /></Protected>} />
-                  <Route path="services/exams" element={<Protected><ExamsPage /></Protected>} />
-                  <Route path="services/gym" element={<Protected><GymPage /></Protected>} />
-                  <Route path="services/lab" element={<Protected><LabPage /></Protected>} />
-                  <Route path="services/rooms" element={<Protected><RoomsPage /></Protected>} />
-                  <Route path="services/announcements" element={<Protected><AnnouncementsPage /></Protected>} />
+                  <Route
+                    path="notices"
+                    element={
+                      <Protected>
+                        <NoticesPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="settings"
+                    element={
+                      <Protected>
+                        <SettingsPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/card"
+                    element={
+                      <Protected>
+                        <CardPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/grades"
+                    element={
+                      <Protected>
+                        <GradesPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/points"
+                    element={
+                      <Protected>
+                        <PointsPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/dorm"
+                    element={
+                      <Protected>
+                        <DormPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/network"
+                    element={
+                      <Protected>
+                        <NetworkPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/exams"
+                    element={
+                      <Protected>
+                        <ExamsPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/gym"
+                    element={
+                      <Protected>
+                        <GymPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/lab"
+                    element={
+                      <Protected>
+                        <LabPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/rooms"
+                    element={
+                      <Protected>
+                        <RoomsPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/announcements"
+                    element={
+                      <Protected>
+                        <AnnouncementsPage />
+                      </Protected>
+                    }
+                  />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>

@@ -1,5 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { api } from "../api/api";
 import type { AuthTokens, LoginCredentials } from "../api/types";
 import { getPlatformLoginCode } from "./platform";

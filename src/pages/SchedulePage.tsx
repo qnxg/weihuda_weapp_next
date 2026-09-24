@@ -17,7 +17,13 @@ import {
   StatusMessage,
 } from "../components/ui";
 import { courseSessionKey, courseSessionPeriodLabel, groupCourseSessions } from "../utils/course";
-import { currentWeekday, dateForSemesterDay, getCurrentWeek, termName, weekdays } from "../utils/format";
+import {
+  currentWeekday,
+  dateForSemesterDay,
+  getCurrentWeek,
+  termName,
+  weekdays,
+} from "../utils/format";
 
 const dayNumberFormatter = new Intl.DateTimeFormat("zh-CN", { day: "numeric" });
 
@@ -61,7 +67,9 @@ function CourseEditor({
   }
 
   const times = course
-    ? relatedCourses.filter((item) => item.customize_id === course.customize_id).map((item) => item.time)
+    ? relatedCourses
+        .filter((item) => item.customize_id === course.customize_id)
+        .map((item) => item.time)
     : [1];
 
   return (
@@ -73,32 +81,71 @@ function CourseEditor({
       <form className="form" onSubmit={submit}>
         <div className="field">
           <label htmlFor="course-name">课程名称</label>
-          <input id="course-name" name="course_name" defaultValue={course?.course_name} required placeholder="例如 项目讨论…" autoComplete="off" />
+          <input
+            id="course-name"
+            name="course_name"
+            defaultValue={course?.course_name}
+            required
+            placeholder="例如 项目讨论…"
+            autoComplete="off"
+          />
         </div>
         <div className="field">
           <label htmlFor="course-weeks">上课周次</label>
-          <input id="course-weeks" name="weeks" defaultValue={course?.weeks.join(",") || String(week)} required inputMode="numeric" placeholder="例如 2,3,4…" autoComplete="off" />
+          <input
+            id="course-weeks"
+            name="weeks"
+            defaultValue={course?.weeks.join(",") || String(week)}
+            required
+            inputMode="numeric"
+            placeholder="例如 2,3,4…"
+            autoComplete="off"
+          />
         </div>
         <div className="field">
           <label htmlFor="course-day">星期</label>
           <select id="course-day" name="day" defaultValue={course?.day ?? day}>
             {weekdays.map((label, index) => {
               const value = (index + 1) % 7;
-              return <option key={label} value={value}>{label}</option>;
+              return (
+                <option key={label} value={value}>
+                  {label}
+                </option>
+              );
             })}
           </select>
         </div>
         <div className="field">
           <label htmlFor="course-times">节次</label>
-          <input id="course-times" name="times" defaultValue={times.join(",")} required inputMode="numeric" placeholder="例如 1,2…" autoComplete="off" />
+          <input
+            id="course-times"
+            name="times"
+            defaultValue={times.join(",")}
+            required
+            inputMode="numeric"
+            placeholder="例如 1,2…"
+            autoComplete="off"
+          />
         </div>
         <div className="field">
           <label htmlFor="course-place">地点</label>
-          <input id="course-place" name="place" defaultValue={course?.place || ""} placeholder="例如 综 101…" autoComplete="off" />
+          <input
+            id="course-place"
+            name="place"
+            defaultValue={course?.place || ""}
+            placeholder="例如 综 101…"
+            autoComplete="off"
+          />
         </div>
         <div className="field">
           <label htmlFor="course-teacher">教师</label>
-          <input id="course-teacher" name="teacher" defaultValue={course?.teacher || ""} placeholder="例如 李老师…" autoComplete="off" />
+          <input
+            id="course-teacher"
+            name="teacher"
+            defaultValue={course?.teacher || ""}
+            placeholder="例如 李老师…"
+            autoComplete="off"
+          />
         </div>
         {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
         <button className="button button--primary button--block" type="submit" disabled={pending}>
@@ -142,7 +189,9 @@ export default function SchedulePage() {
 
   const saveCourse = useMutation({
     mutationFn: (input: CustomCourseRequest) =>
-      editing ? api.course.update(editing.customize_id!, input) : api.course.create(year, term, input),
+      editing
+        ? api.course.update(editing.customize_id!, input)
+        : api.course.create(year, term, input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["courses", year, term] });
       setEditing(undefined);
@@ -160,14 +209,18 @@ export default function SchedulePage() {
 
   const currentWeek = semester.data ? getCurrentWeek(semester.data) : 1;
   const requestedWeek = Number(searchParams.get("week"));
-  const selectedWeek = semester.data && requestedWeek >= (semester.data.from_zero ? 0 : 1) && requestedWeek <= semester.data.weeks
-    ? requestedWeek
-    : currentWeek;
+  const selectedWeek =
+    semester.data &&
+    requestedWeek >= (semester.data.from_zero ? 0 : 1) &&
+    requestedWeek <= semester.data.weeks
+      ? requestedWeek
+      : currentWeek;
   const requestedDayValue = searchParams.get("day");
   const requestedDay = Number(requestedDayValue);
-  const selectedDay = requestedDayValue !== null && requestedDay >= 0 && requestedDay <= 6
-    ? requestedDay
-    : currentWeekday();
+  const selectedDay =
+    requestedDayValue !== null && requestedDay >= 0 && requestedDay <= 6
+      ? requestedDay
+      : currentWeekday();
 
   const visibleCourses = useMemo(() => {
     if (!courses.data) return [];
@@ -193,19 +246,30 @@ export default function SchedulePage() {
     return (
       <div className="page">
         <PageHeader title="课表" description="按周查看课程和自定义安排" />
-        <AuthPrompt title="登录后查看你的课表" description="课表来自个人教务数据，需要验证校园账号。" />
+        <AuthPrompt
+          title="登录后查看你的课表"
+          description="课表来自个人教务数据，需要验证校园账号。"
+        />
       </div>
     );
   }
 
   const queries = [semester, courses, extra, tableSetting];
-  if (queries.some((query) => query.isPending)) return <div className="page"><PageSkeleton rows={7} /></div>;
+  if (queries.some((query) => query.isPending))
+    return (
+      <div className="page">
+        <PageSkeleton rows={7} />
+      </div>
+    );
   const failed = queries.find((query) => query.isError);
   if (failed) {
     return (
       <div className="page">
         <PageHeader title="课表" />
-        <PageError error={failed.error} onRetry={() => void Promise.all(queries.map((query) => query.refetch()))} />
+        <PageError
+          error={failed.error}
+          onRetry={() => void Promise.all(queries.map((query) => query.refetch()))}
+        />
       </div>
     );
   }
@@ -217,7 +281,12 @@ export default function SchedulePage() {
         title="课表"
         description={`${semester.data!.xn} ${termName(semester.data!.xq)} · 共 ${semester.data!.weeks} 周`}
         action={
-          <button className="icon-button" type="button" aria-label="添加自定义课程" onClick={() => setEditing(null)}>
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="添加自定义课程"
+            onClick={() => setEditing(null)}
+          >
             <Plus aria-hidden="true" />
           </button>
         }
@@ -225,16 +294,36 @@ export default function SchedulePage() {
 
       <div className="surface surface--padded stack gap-12">
         <div className="week-control">
-          <button className="icon-button" type="button" aria-label="上一周" disabled={selectedWeek <= firstWeek} onClick={() => setCalendar({ week: selectedWeek - 1 })}>
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="上一周"
+            disabled={selectedWeek <= firstWeek}
+            onClick={() => setCalendar({ week: selectedWeek - 1 })}
+          >
             <ChevronLeft aria-hidden="true" />
           </button>
           <div>
             <strong>第 {selectedWeek} 周</strong>
             {selectedWeek !== currentWeek ? (
-              <button className="button button--ghost button--small" type="button" onClick={() => setCalendar({ week: currentWeek })}>回到本周</button>
-            ) : <p className="muted text-sm">本周</p>}
+              <button
+                className="button button--ghost button--small"
+                type="button"
+                onClick={() => setCalendar({ week: currentWeek })}
+              >
+                回到本周
+              </button>
+            ) : (
+              <p className="muted text-sm">本周</p>
+            )}
           </div>
-          <button className="icon-button" type="button" aria-label="下一周" disabled={selectedWeek >= semester.data!.weeks} onClick={() => setCalendar({ week: selectedWeek + 1 })}>
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="下一周"
+            disabled={selectedWeek >= semester.data!.weeks}
+            onClick={() => setCalendar({ week: selectedWeek + 1 })}
+          >
             <ChevronRight aria-hidden="true" />
           </button>
         </div>
@@ -243,7 +332,13 @@ export default function SchedulePage() {
             const day = (index + 1) % 7;
             const calendarDate = dateForSemesterDay(semester.data!, selectedWeek, day);
             return (
-              <button className={`day-button${selectedDay === day ? " is-active" : ""}`} type="button" key={label} onClick={() => setCalendar({ day })} aria-pressed={selectedDay === day}>
+              <button
+                className={`day-button${selectedDay === day ? " is-active" : ""}`}
+                type="button"
+                key={label}
+                onClick={() => setCalendar({ day })}
+                aria-pressed={selectedDay === day}
+              >
                 {label.slice(1)}
                 <span>{calendarDate ? dayNumberFormatter.format(calendarDate) : "—"}</span>
               </button>
@@ -267,23 +362,42 @@ export default function SchedulePage() {
                       <p className="course-block__name text-clamp-2">{course.course_name}</p>
                       {!active ? <span className="badge">非本周</span> : null}
                     </div>
-                    <p className="course-block__meta cluster gap-4"><MapPin aria-hidden="true" />{course.place || "地点待定"}</p>
+                    <p className="course-block__meta cluster gap-4">
+                      <MapPin aria-hidden="true" />
+                      {course.place || "地点待定"}
+                    </p>
                     <p className="course-block__meta">{course.teacher || "教师待定"}</p>
                     <details>
                       <summary>课程详情</summary>
                       <p>课程号：{course.course_id || "自定义课程"}</p>
                       <p>班级：{course.class_name || "未设置"}</p>
-                      <p>类型：{course.course_type || "自定义"} · 学分：{course.credit ?? "无"}</p>
-                      <p>校区：{course.area || "未设置"} · 人数：{course.people ?? "未知"}</p>
-                      <p>周次：{course.weeks.join("、")} · 备注：{course.extra || "无"}</p>
+                      <p>
+                        类型：{course.course_type || "自定义"} · 学分：{course.credit ?? "无"}
+                      </p>
+                      <p>
+                        校区：{course.area || "未设置"} · 人数：{course.people ?? "未知"}
+                      </p>
+                      <p>
+                        周次：{course.weeks.join("、")} · 备注：{course.extra || "无"}
+                      </p>
                     </details>
                     {course.customize_id !== null ? (
                       <div className="cluster gap-8">
-                        <button className="button button--ghost button--small" type="button" onClick={() => setEditing(course)}>
-                          <Pencil aria-hidden="true" />编辑
+                        <button
+                          className="button button--ghost button--small"
+                          type="button"
+                          onClick={() => setEditing(course)}
+                        >
+                          <Pencil aria-hidden="true" />
+                          编辑
                         </button>
-                        <button className="button button--ghost button--small text-danger" type="button" onClick={() => setDeleting(course)}>
-                          <Trash2 aria-hidden="true" />删除
+                        <button
+                          className="button button--ghost button--small text-danger"
+                          type="button"
+                          onClick={() => setDeleting(course)}
+                        >
+                          <Trash2 aria-hidden="true" />
+                          删除
                         </button>
                       </div>
                     ) : null}
@@ -296,7 +410,15 @@ export default function SchedulePage() {
           <EmptyState
             title="这一天没有课程"
             description="切换日期或添加自定义课程。"
-            action={<button className="button button--secondary" type="button" onClick={() => setEditing(null)}>添加课程</button>}
+            action={
+              <button
+                className="button button--secondary"
+                type="button"
+                onClick={() => setEditing(null)}
+              >
+                添加课程
+              </button>
+            }
           />
         )}
       </Section>
@@ -307,12 +429,19 @@ export default function SchedulePage() {
             {extra.data!.map((course) => (
               <article className="record-item" key={course.course_id}>
                 <h3>{course.course_name}</h3>
-                <p className="muted text-sm">{course.course_id} · {course.class_name} · {course.course_type} · {course.credit} 学分</p>
-                <p className="muted text-sm">{course.area} · {course.teacher} · {course.people} 人 · {course.extra || "无备注"}</p>
+                <p className="muted text-sm">
+                  {course.course_id} · {course.class_name} · {course.course_type} · {course.credit}{" "}
+                  学分
+                </p>
+                <p className="muted text-sm">
+                  {course.area} · {course.teacher} · {course.people} 人 · {course.extra || "无备注"}
+                </p>
               </article>
             ))}
           </div>
-        ) : <EmptyState title="没有待排课程" description="所有课程都已经排入周课表。" />}
+        ) : (
+          <EmptyState title="没有待排课程" description="所有课程都已经排入周课表。" />
+        )}
       </Section>
 
       {editing !== undefined ? (
@@ -324,7 +453,10 @@ export default function SchedulePage() {
           pending={saveCourse.isPending}
           error={formError}
           onSubmit={(input) => saveCourse.mutate(input)}
-          onClose={() => { setEditing(undefined); setFormError(""); }}
+          onClose={() => {
+            setEditing(undefined);
+            setFormError("");
+          }}
         />
       ) : null}
       {deleting ? (

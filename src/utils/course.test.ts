@@ -47,10 +47,9 @@ describe("course sessions", () => {
   });
 
   it("does not merge adjacent periods when displayed details differ", () => {
-    expect(groupCourseSessions([
-      course(1),
-      course(2, { extra: "实验课", people: 20 }),
-    ])).toHaveLength(2);
+    expect(
+      groupCourseSessions([course(1), course(2, { extra: "实验课", people: 20 })]),
+    ).toHaveLength(2);
   });
 
   it("merges interleaved concurrent courses independently", () => {
@@ -76,11 +75,7 @@ describe("course sessions", () => {
     ["2026-09-23T09:40:00", "completed"],
   ] as const)("classifies the course state at %s", (now, expected) => {
     const [session] = groupCourseSessions([course(1), course(2)]);
-    expect(getCourseStatus(
-      session,
-      new Date("2026-09-23T00:00:00"),
-      new Date(now),
-    )).toBe(expected);
+    expect(getCourseStatus(session, new Date("2026-09-23T00:00:00"), new Date(now))).toBe(expected);
   });
 
   it("defaults to tomorrow only after a non-empty day is fully completed", () => {

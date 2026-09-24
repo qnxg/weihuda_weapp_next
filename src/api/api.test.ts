@@ -11,13 +11,16 @@ describe("API endpoint parameters", () => {
   it("uses the documented ranking enum values", async () => {
     setSession({ access_token: "token", refresh_token: "refresh" });
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
-        code: "OK",
-        data: { all: null, compulsory: null, core: null },
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({
+          code: "OK",
+          data: { all: null, compulsory: null, core: null },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -31,12 +34,15 @@ describe("API endpoint parameters", () => {
 
   it("preserves an empty trusted-ranking response", async () => {
     setSession({ access_token: "token", refresh_token: "refresh" });
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ code: "OK", data: null }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    ));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: "OK", data: null }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
 
     await expect(api.rank.ca()).resolves.toBeNull();
   });

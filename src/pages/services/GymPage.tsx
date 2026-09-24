@@ -2,9 +2,24 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity } from "lucide-react";
 import { api } from "../../api/api";
 import type { GymGrade } from "../../api/types";
-import { EmptyState, PageError, PageHeader, PageSkeleton, Section, StatusMessage } from "../../components/ui";
+import {
+  EmptyState,
+  PageError,
+  PageHeader,
+  PageSkeleton,
+  Section,
+  StatusMessage,
+} from "../../components/ui";
 
-const metricLabels: Array<[keyof Pick<GymGrade, "short_run" | "bmi" | "jump" | "pull_and_sit" | "run" | "sit_and_reach" | "vc">, string]> = [
+const metricLabels: Array<
+  [
+    keyof Pick<
+      GymGrade,
+      "short_run" | "bmi" | "jump" | "pull_and_sit" | "run" | "sit_and_reach" | "vc"
+    >,
+    string,
+  ]
+> = [
   ["short_run", "短跑"],
   ["bmi", "体重指数"],
   ["jump", "立定跳远"],
@@ -22,16 +37,27 @@ const eyeLabels: Array<[keyof GymGrade["eye"], string]> = [
 
 export default function GymPage() {
   const grade = useQuery({ queryKey: ["gym", "grade", 2025], queryFn: () => api.gym.grade(2025) });
-  const appointments = useQuery({ queryKey: ["gym", "appointments"], queryFn: api.gym.appointments });
+  const appointments = useQuery({
+    queryKey: ["gym", "appointments"],
+    queryFn: api.gym.appointments,
+  });
   const queries = [grade, appointments];
 
-  if (queries.some((query) => query.isPending)) return <div className="page"><PageSkeleton rows={8} /></div>;
+  if (queries.some((query) => query.isPending))
+    return (
+      <div className="page">
+        <PageSkeleton rows={8} />
+      </div>
+    );
   const failed = queries.find((query) => query.isError);
   if (failed) {
     return (
       <div className="page">
         <PageHeader title="体测" back />
-        <PageError error={failed.error} onRetry={() => void Promise.all(queries.map((query) => query.refetch()))} />
+        <PageError
+          error={failed.error}
+          onRetry={() => void Promise.all(queries.map((query) => query.refetch()))}
+        />
       </div>
     );
   }
@@ -60,7 +86,9 @@ export default function GymPage() {
               <div className="metric" key={key}>
                 <p className="metric__label">{label}</p>
                 <p className="metric__value">{metric.score}</p>
-                <p className="muted text-sm">{metric.grade} · {metric.rank}</p>
+                <p className="muted text-sm">
+                  {metric.grade} · {metric.rank}
+                </p>
                 <span className="badge">{metric.color}</span>
               </div>
             );
@@ -75,8 +103,12 @@ export default function GymPage() {
             return (
               <article className="record-item" key={key}>
                 <h3>{label}</h3>
-                <p className="text-sm">左眼 {item.left.value} · {item.left.description}</p>
-                <p className="text-sm">右眼 {item.right.value} · {item.right.description}</p>
+                <p className="text-sm">
+                  左眼 {item.left.value} · {item.left.description}
+                </p>
+                <p className="text-sm">
+                  右眼 {item.right.value} · {item.right.description}
+                </p>
               </article>
             );
           })}
@@ -88,14 +120,21 @@ export default function GymPage() {
           <div className="surface list">
             {appointments.data!.map((item) => (
               <article className="record-item stack gap-8" key={`${item.name}-${item.time}`}>
-                <div className="cluster spread gap-12"><h3>{item.name}</h3><span className="badge badge--success">{item.status}</span></div>
+                <div className="cluster spread gap-12">
+                  <h3>{item.name}</h3>
+                  <span className="badge badge--success">{item.status}</span>
+                </div>
                 <p>{item.description}</p>
-                <p className="muted text-sm">{item.show_date} · {item.time}</p>
+                <p className="muted text-sm">
+                  {item.show_date} · {item.time}
+                </p>
                 <p className="muted text-sm">测试类型：{item.test_type}</p>
               </article>
             ))}
           </div>
-        ) : <EmptyState title="暂无体测预约" description="成功预约后，时间与测试项目会显示在这里。" />}
+        ) : (
+          <EmptyState title="暂无体测预约" description="成功预约后，时间与测试项目会显示在这里。" />
+        )}
       </Section>
     </div>
   );
