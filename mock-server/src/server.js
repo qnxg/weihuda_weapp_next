@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import http from "node:http";
 import { Buffer } from "node:buffer";
 import { fixtures, nextId, ok, state, timestamp } from "./fixtures.js";
@@ -323,7 +325,7 @@ export function createMockServer({
   });
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const host = process.env.MOCK_HOST || "127.0.0.1";
   const port = Number(process.env.MOCK_PORT || process.env.PORT || 3000);
   createMockServer().listen(port, host, () => {

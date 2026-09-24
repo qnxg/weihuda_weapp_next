@@ -23,7 +23,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "MOCK_PORT=3100 MOCK_URL=http://127.0.0.1:3100 npm run dev",
+    command: "cross-env MOCK_PORT=3100 MOCK_URL=http://127.0.0.1:3100 npm run dev",
     url: "http://127.0.0.1:5173",
     reuseExistingServer: true,
     timeout: 30_000,
