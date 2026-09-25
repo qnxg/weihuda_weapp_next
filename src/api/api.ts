@@ -102,8 +102,10 @@ export const api = {
     remove: (id: number) => request<void>(`/course/custom/${id}`, { method: "DELETE" }),
   },
   semester: {
-    get: (year = 2026, term = "autumn") =>
-      request<Semester>(`/semester${toQuery({ xn: year, xq: term })}`),
+    get: (...args: [] | [year: number, term: string]) => {
+      const [year, term] = args;
+      return request<Semester>(`/semester${toQuery({ xn: year, xq: term })}`);
+    },
   },
   points: {
     summary: () => request<Points>("/jifen"),

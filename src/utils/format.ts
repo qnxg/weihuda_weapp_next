@@ -1,5 +1,8 @@
 import type { Semester } from "../api/types";
 
+const DAY_MS = 86_400_000;
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   month: "long",
   day: "numeric",
@@ -23,8 +26,24 @@ const currencyFormatter = new Intl.NumberFormat("zh-CN", {
 
 export const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
+export interface SemesterCountdown {
+  status: "upcoming" | "active" | "completed";
+  days: number;
+  target: Date;
+}
+
+function calendarDayValue(date: Date) {
+  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function calendarDaysBetween(from: Date, to: Date) {
+  return Math.round((calendarDayValue(to) - calendarDayValue(from)) / DAY_MS);
+}
+
 export function parseApiDate(value: string) {
-  const normalized = value.includes("T") ? value : value.replace(" ", "T");
+  const normalized = DATE_ONLY_PATTERN.test(value)
+    ? `${value}T00:00:00`
+    : value.includes("T") ? value : value.replace(" ", "T");
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? null : date;
 }
@@ -73,6 +92,29 @@ export function isDateInSemester(semester: Semester, date = new Date()) {
   const current = new Date(date);
   current.setHours(0, 0, 0, 0);
   return current >= start && current < end;
+}
+
+export function getSemesterCountdown(
+  semester: Semester,
+  now = new Date(),
+): SemesterCountdown | null {
+  const start = parseApiDate(semester.start);
+  if (!start) return null;
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + semester.weeks * 7);
+
+  const daysUntilStart = calendarDaysBetween(now, start);
+  if (daysUntilStart > 0) {
+    return { status: "upcoming", days: daysUntilStart, target: start };
+  }
+
+  const daysUntilEnd = calendarDaysBetween(now, end);
+  if (daysUntilEnd > 0) {
+    return { status: "active", days: daysUntilEnd, target: end };
+  }
+
+  return { status: "completed", days: 0, target: end };
 }
 
 export function dateForSemesterDay(semester: Semester, week: number, day: number) {

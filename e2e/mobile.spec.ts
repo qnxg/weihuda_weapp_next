@@ -133,6 +133,14 @@ test("today courses switch days and expose time-based card states", async ({ pag
   await expect(page.getByText(/^(已结束|上课中|未开始)$/)).toHaveCount(0);
   await expect(page.getByText("完整课表")).toHaveCount(0);
   await expect(page.locator(".today-courses .timeline")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "倒计时", exact: true })).toBeVisible();
+  await expect(page.getByRole("article", {
+    name: "距离中秋节还有 2 天，9 月 25 日至 27 日，共 3 天",
+  })).toBeVisible();
+  await expect(page.getByRole("article", {
+    name: "距离2026 秋季学期结束还有 102 天，1 月 3 日结束，共 16 周",
+  })).toBeVisible();
+  await expect(page.locator(".countdown-list > .countdown-item")).toHaveCount(2);
 
   const [panelBox, cardBox] = await Promise.all([
     page.locator(".course-day-panel").boundingBox(),

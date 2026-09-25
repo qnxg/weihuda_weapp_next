@@ -969,6 +969,137 @@ svg {
   margin-top: -12px;
 }
 
+.countdown-list {
+  display: grid;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--elevation-1);
+}
+
+.countdown-item {
+  --countdown-soft: var(--surface-subtle);
+  --countdown-border: var(--line);
+  --countdown-color: var(--muted);
+
+  display: grid;
+  min-height: 104px;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  background: var(--surface);
+}
+
+.countdown-item + .countdown-item {
+  border-top: 1px solid var(--line);
+}
+
+.countdown-item--warning {
+  --countdown-soft: var(--warning-soft);
+  --countdown-border: var(--warning-minus-1);
+  --countdown-color: var(--warning-plus-2);
+}
+
+.countdown-item--success {
+  --countdown-soft: var(--success-soft);
+  --countdown-border: var(--success-minus-1);
+  --countdown-color: var(--success-plus-2);
+}
+
+.countdown-item--info {
+  --countdown-soft: var(--info-soft);
+  --countdown-border: var(--line-strong);
+  --countdown-color: var(--info);
+}
+
+.countdown-item__summary {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 6px;
+  padding: 12px 14px 12px 16px;
+}
+
+.countdown-item__icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--countdown-soft);
+  color: var(--countdown-color);
+}
+
+.countdown-item__copy {
+  min-width: 0;
+}
+
+.countdown-item__eyebrow {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.countdown-item__copy h3 {
+  margin-top: 1px;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.countdown-item__detail {
+  display: flex;
+  min-width: 0;
+  grid-column: 1 / -1;
+  align-items: flex-start;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.countdown-item__detail svg {
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+}
+
+.countdown-item__metric {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 12px 8px;
+  border-left: 1px solid var(--countdown-border);
+  background: var(--countdown-soft);
+  color: var(--countdown-color);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.countdown-item__metric p {
+  white-space: nowrap;
+}
+
+.countdown-item__metric p strong {
+  font-size: 34px;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+
+.countdown-item__metric small {
+  color: var(--countdown-color);
+  font-size: 11px;
+}
+
+.countdown-item__metric-text {
+  max-width: 72px;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: center;
+}
+
 .course-day-tabs {
   display: flex;
   min-height: 44px;
@@ -1610,6 +1741,21 @@ svg {
 @media (width <= 359px) {
   .page {
     padding-inline: 12px;
+  }
+
+  .countdown-item {
+    grid-template-columns: minmax(0, 1fr) 78px;
+  }
+
+  .countdown-item__summary {
+    grid-template-columns: 34px minmax(0, 1fr);
+    column-gap: 9px;
+    padding-inline: 12px 9px;
+  }
+
+  .countdown-item__icon {
+    width: 34px;
+    height: 34px;
   }
 
   .service-grid {

@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/api";
 import type { IndexCardKey, IndexCardSetting } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { CountdownOverview } from "../components/CountdownOverview";
 import { TodayCourses } from "../components/TodayCourses";
 import { AuthPrompt, PageError, PageHeader, PageSkeleton, Section } from "../components/ui";
 import { useMinuteClock } from "../hooks/useMinuteClock";
@@ -27,14 +28,14 @@ export default function TodayPage() {
   const { isAuthenticated } = useAuth();
   const now = useMinuteClock();
   const semester = useQuery({
-    queryKey: ["semester", 2026, "autumn"],
-    queryFn: () => api.semester.get(2026, "autumn"),
+    queryKey: ["semester", "current"],
+    queryFn: () => api.semester.get(),
     enabled: isAuthenticated,
   });
   const courses = useQuery({
-    queryKey: ["courses", 2026, "autumn"],
-    queryFn: () => api.course.table(2026, "autumn"),
-    enabled: isAuthenticated,
+    queryKey: ["courses", semester.data?.xn, semester.data?.xq],
+    queryFn: () => api.course.table(semester.data!.xn, semester.data!.xq),
+    enabled: isAuthenticated && semester.data !== undefined,
   });
   const exams = useQuery({ queryKey: ["exams"], queryFn: api.exam.list, enabled: isAuthenticated });
   const notices = useQuery({
@@ -63,9 +64,9 @@ export default function TodayPage() {
     enabled: isAuthenticated,
   });
   const grades = useQuery({
-    queryKey: ["grades", 2026, "autumn"],
-    queryFn: () => api.grade.list(2026, "autumn"),
-    enabled: isAuthenticated,
+    queryKey: ["grades", semester.data?.xn, semester.data?.xq],
+    queryFn: () => api.grade.list(semester.data!.xn, semester.data!.xq),
+    enabled: isAuthenticated && semester.data !== undefined,
   });
   const email = useQuery({
     queryKey: ["email", "unread"],
@@ -101,13 +102,6 @@ export default function TodayPage() {
   }
 
   const queries = [semester, courses, exams, notices, cards];
-  if (queries.some((query) => query.isPending)) {
-    return (
-      <div className="page">
-        <PageSkeleton rows={6} />
-      </div>
-    );
-  }
   const failed = queries.find((query) => query.isError);
   if (failed) {
     return (
@@ -117,6 +111,13 @@ export default function TodayPage() {
           error={failed.error}
           onRetry={() => void Promise.all(queries.map((query) => query.refetch()))}
         />
+      </div>
+    );
+  }
+  if (queries.some((query) => query.isPending)) {
+    return (
+      <div className="page">
+        <PageSkeleton rows={6} />
       </div>
     );
   }
@@ -243,6 +244,8 @@ export default function TodayPage() {
           now={now}
         />
       ) : null}
+
+      <CountdownOverview semester={semester.data!} now={now} />
 
       <Section title="近期事项">
         <div className="surface">

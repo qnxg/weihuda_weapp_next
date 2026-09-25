@@ -4,12 +4,19 @@ import {
   dateForSemesterDay,
   formatDateHeading,
   getCurrentWeek,
+  getSemesterCountdown,
   isDateInSemester,
+  parseApiDate,
   periodName,
   termName,
 } from "./format";
 
 describe("calendar formatting", () => {
+  it("parses API date-only values as local calendar dates", () => {
+    const date = parseApiDate("2026-09-13");
+    expect(date && [date.getFullYear(), date.getMonth() + 1, date.getDate()]).toEqual([2026, 9, 13]);
+  });
+
   it("calculates a one-based semester week", () => {
     expect(
       getCurrentWeek(
@@ -41,6 +48,23 @@ describe("calendar formatting", () => {
     expect(isDateInSemester(semester, new Date("2026-09-13T12:00:00"))).toBe(true);
     expect(isDateInSemester(semester, new Date("2027-01-02T12:00:00"))).toBe(true);
     expect(isDateInSemester(semester, new Date("2027-01-03T00:00:00"))).toBe(false);
+  });
+
+  it("counts down to the semester boundary by local calendar day", () => {
+    const semester = { xn: 2026, xq: "autumn", start: "2026-09-13", weeks: 16, from_zero: false };
+
+    expect(getSemesterCountdown(semester, new Date(2026, 8, 10, 23, 59))).toMatchObject({
+      status: "upcoming",
+      days: 3,
+    });
+    expect(getSemesterCountdown(semester, new Date(2026, 8, 23, 23, 59))).toMatchObject({
+      status: "active",
+      days: 102,
+    });
+    expect(getSemesterCountdown(semester, new Date(2027, 0, 3, 0, 0))).toMatchObject({
+      status: "completed",
+      days: 0,
+    });
   });
 
   it.each([
