@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleHelp, Image as ImageIcon } from "lucide-react";
+import { CircleHelp, Image as ImageIcon, RotateCcw } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/api";
 import { useAuth } from "../auth/AuthProvider";
@@ -26,7 +26,22 @@ function AuthenticatedImage({ id, alt }: { id: string; alt: string }) {
 
   if (image.isPending)
     return <div className="skeleton feedback-image" aria-label="正在加载反馈图片" />;
-  if (image.isError || !src) return <span className="muted text-sm">图片暂时无法显示</span>;
+  if (image.isError) {
+    return (
+      <span className="cluster gap-8">
+        <span className="muted text-sm">图片暂时无法显示</span>
+        <button
+          className="button button--text button--small"
+          type="button"
+          onClick={() => void image.refetch()}
+        >
+          <RotateCcw aria-hidden="true" />
+          重试
+        </button>
+      </span>
+    );
+  }
+  if (!src) return <div className="skeleton feedback-image" aria-label="正在准备反馈图片" />;
   return (
     <img className="feedback-image" src={src} width="320" height="180" loading="lazy" alt={alt} />
   );

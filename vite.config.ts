@@ -8,7 +8,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: process.env.MOCK_URL || "http://127.0.0.1:3000",
+        target: process.env.MOCK_URL || "http://127.0.0.1:3100",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, "") || "/",
       },

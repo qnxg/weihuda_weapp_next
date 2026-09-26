@@ -82,6 +82,20 @@ export interface Rank {
   core: RankDetail | null;
 }
 
+export type GradeTerm = "autumn" | "winter" | "spring" | "summer";
+export type RankTerm = Exclude<GradeTerm, "winter">;
+export type RankRange = "major" | "minor";
+export type RankDataSource = "total" | "execution";
+export type RankDisplay = "max" | "initial";
+
+export interface RankQuery {
+  xn?: number;
+  xq?: RankTerm;
+  range?: RankRange;
+  data_source?: RankDataSource;
+  display?: RankDisplay;
+}
+
 export interface CaRank {
   updated_at: string;
   rank: Rank;
@@ -127,10 +141,33 @@ export interface CustomCourseRequest {
 
 export interface Semester {
   xn: number;
-  xq: "spring" | "autumn" | string;
+  xq: GradeTerm;
   start: string;
   weeks: number;
   from_zero: boolean;
+}
+
+export interface HolidayCountdownInfo {
+  name: string;
+  start: string;
+  end: string;
+  status: "upcoming" | "active";
+  days: number;
+  duration: number;
+}
+
+export interface SemesterCountdownInfo {
+  xn: number;
+  xq: "spring" | "summer" | "autumn" | "winter";
+  target_date: string;
+  weeks: number;
+  status: "upcoming" | "active" | "completed";
+  days: number;
+}
+
+export interface CountdownInfo {
+  holiday: HolidayCountdownInfo | null;
+  semester: SemesterCountdownInfo | null;
 }
 
 export interface Points {

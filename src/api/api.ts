@@ -5,6 +5,7 @@ import type {
   CaRank,
   CardInfo,
   CardRecords,
+  CountdownInfo,
   Course,
   CustomCourseRequest,
   CustomExamRequest,
@@ -17,6 +18,7 @@ import type {
   Goods,
   Grade,
   GradeDetail,
+  GradeTerm,
   GymAppointment,
   GymGrade,
   IndexCardSetting,
@@ -31,6 +33,7 @@ import type {
   PointRecords,
   Points,
   Rank,
+  RankQuery,
   Semester,
   Settings,
   TableSetting,
@@ -49,6 +52,9 @@ export const api = {
   system: {
     health: () => request<{ hello: string }>("/", { auth: false }),
     about: () => request<About>("/about", { auth: false }),
+  },
+  countdown: {
+    get: () => request<CountdownInfo>("/countdown", { auth: false }),
   },
   auth: {
     login: (input: LoginRequest) =>
@@ -83,10 +89,8 @@ export const api = {
       request<CardRecords>(`/card/record${toQuery({ year, month, type })}`),
   },
   rank: {
-    school: (year: number, term: string) =>
-      request<Rank>(
-        `/rank${toQuery({ xn: year, xq: term, range: "major", data_source: "total", display: "max" })}`,
-      ),
+    school: ({ xn, xq, range = "major", data_source = "total", display = "max" }: RankQuery = {}) =>
+      request<Rank>(`/rank${toQuery({ xn, xq, range, data_source, display })}`),
     ca: () => request<CaRank | null>("/rank/ca"),
     refreshCa: () => request<void>("/rank/ca", { method: "PUT" }),
   },
@@ -104,7 +108,7 @@ export const api = {
   semester: {
     get: (...args: [] | [year: number, term: string]) => {
       const [year, term] = args;
-      return request<Semester>(`/semester${toQuery({ xn: year, xq: term })}`);
+      return request<Semester>(`/semester${toQuery({ xn: year, xq: term })}`, { auth: false });
     },
   },
   points: {
@@ -127,7 +131,7 @@ export const api = {
     refreshElectricity: () => request<void>("/dorm/electricity", { method: "PUT" }),
   },
   grade: {
-    list: (year: number, term: string) =>
+    list: (year: number, term: GradeTerm) =>
       request<Grade[]>(`/grade${toQuery({ xn: year, xq: term })}`),
     detail: (id: string) => request<GradeDetail[]>(`/grade/${encodeURIComponent(id)}`),
   },

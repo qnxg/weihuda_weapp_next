@@ -2,14 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api } from "../api/api";
 import type { IndexCardKey, IndexCardSetting, TableSetting } from "../api/types";
-import {
-  DataRow,
-  PageError,
-  PageHeader,
-  PageSkeleton,
-  Section,
-  StatusMessage,
-} from "../components/ui";
+import { DataRow, PageHeader, QueryState, Section, StatusMessage } from "../components/ui";
 
 const cardOptions = [
   ["course", "今日课程", "课程时间、教室与教师"],
@@ -63,27 +56,7 @@ export default function SettingsPage() {
     },
   });
 
-  const queries = [settings, cards, table];
-  if (queries.some((query) => query.isPending))
-    return (
-      <div className="page">
-        <PageSkeleton rows={7} />
-      </div>
-    );
-  const failed = queries.find((query) => query.isError);
-  if (failed) {
-    return (
-      <div className="page">
-        <PageHeader title="设置" back />
-        <PageError
-          error={failed.error}
-          onRetry={() => void Promise.all(queries.map((query) => query.refetch()))}
-        />
-      </div>
-    );
-  }
-
-  function submitCards(event: FormEvent<HTMLFormElement>) {
+  function submitCards(event: FormEvent<HTMLFormElement>, current: IndexCardSetting) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const selectedCards = data.getAll("cards").map(String) as IndexCardKey[];
@@ -93,16 +66,16 @@ export default function SettingsPage() {
     }
     setCardValidation("");
     saveCards.mutate({
-      version: cards.data!.version + 1,
+      version: current.version + 1,
       setting: { cards: selectedCards },
     });
   }
 
-  function submitTable(event: FormEvent<HTMLFormElement>) {
+  function submitTable(event: FormEvent<HTMLFormElement>, current: TableSetting) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     saveTable.mutate({
-      version: table.data!.version + 1,
+      version: current.version + 1,
       setting: {
         display_not_current_week_courses: data.get("display_not_current_week_courses") === "on",
       },
@@ -114,100 +87,116 @@ export default function SettingsPage() {
       <PageHeader title="设置" description="调整首页内容和课表显示" back />
 
       <Section title="配置状态">
-        <div className="surface list">
-          <DataRow
-            label="首页卡片版本"
-            value={settings.data!.index_card_setting.version}
-            detail={`${settings.data!.index_card_setting.setting.cards.length} 个卡片`}
-          />
-          <DataRow
-            label="课表设置版本"
-            value={settings.data!.table_setting.version}
-            detail={
-              settings.data!.table_setting.setting.display_not_current_week_courses
-                ? "显示非本周课程"
-                : "仅显示本周课程"
-            }
-          />
-        </div>
+        <QueryState query={settings} loadingRows={2}>
+          {(value) => (
+            <div className="surface list">
+              <DataRow
+                label="首页卡片版本"
+                value={value.index_card_setting.version}
+                detail={`${value.index_card_setting.setting.cards.length} 个卡片`}
+              />
+              <DataRow
+                label="课表设置版本"
+                value={value.table_setting.version}
+                detail={
+                  value.table_setting.setting.display_not_current_week_courses
+                    ? "显示非本周课程"
+                    : "仅显示本周课程"
+                }
+              />
+            </div>
+          )}
+        </QueryState>
       </Section>
 
       <Section title="首页卡片" description="选择需要在今日页关注的内容。">
-        <form
-          className="form"
-          onChange={() => {
-            setCardMessage("");
-            setCardValidation("");
-            saveCards.reset();
-          }}
-          onSubmit={submitCards}
-        >
-          <fieldset className="field settings-fieldset choice-list">
-            <legend className="sr-only">首页卡片</legend>
-            {cardOptions.map(([value, label, description]) => (
-              <label className="choice-card" key={value}>
-                <span className="choice-card__copy">
-                  <strong>{label}</strong>
-                  <span>{description}</span>
-                </span>
-                <input
-                  type="checkbox"
-                  name="cards"
-                  value={value}
-                  defaultChecked={cards.data!.setting.cards.includes(value)}
-                />
-                <span className="choice-card__surface" aria-hidden="true" />
-              </label>
-            ))}
-          </fieldset>
-          {cardValidation ? <StatusMessage tone="danger">{cardValidation}</StatusMessage> : null}
-          {saveCards.isError ? (
-            <StatusMessage tone="danger">{saveCards.error.message}</StatusMessage>
-          ) : null}
-          {cardMessage ? <StatusMessage tone="success">{cardMessage}</StatusMessage> : null}
-          <button
-            className="button button--primary button--block"
-            type="submit"
-            disabled={saveCards.isPending}
-          >
-            {saveCards.isPending ? "正在保存…" : "保存首页设置"}
-          </button>
-        </form>
+        <QueryState query={cards} loadingRows={5}>
+          {(cardSetting) => (
+            <form
+              className="form"
+              key={cardSetting.version}
+              onChange={() => {
+                setCardMessage("");
+                setCardValidation("");
+                saveCards.reset();
+              }}
+              onSubmit={(event) => submitCards(event, cardSetting)}
+            >
+              <fieldset className="field settings-fieldset choice-list">
+                <legend className="sr-only">首页卡片</legend>
+                {cardOptions.map(([value, label, description]) => (
+                  <label className="choice-card" key={value}>
+                    <span className="choice-card__copy">
+                      <strong>{label}</strong>
+                      <span>{description}</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      name="cards"
+                      value={value}
+                      defaultChecked={cardSetting.setting.cards.includes(value)}
+                    />
+                    <span className="choice-card__surface" aria-hidden="true" />
+                  </label>
+                ))}
+              </fieldset>
+              {cardValidation ? (
+                <StatusMessage tone="danger">{cardValidation}</StatusMessage>
+              ) : null}
+              {saveCards.isError ? (
+                <StatusMessage tone="danger">{saveCards.error.message}</StatusMessage>
+              ) : null}
+              {cardMessage ? <StatusMessage tone="success">{cardMessage}</StatusMessage> : null}
+              <button
+                className="button button--primary button--block"
+                type="submit"
+                disabled={saveCards.isPending}
+              >
+                {saveCards.isPending ? "正在保存…" : "保存首页设置"}
+              </button>
+            </form>
+          )}
+        </QueryState>
       </Section>
 
       <Section title="课表显示">
-        <form
-          className="form"
-          onChange={() => {
-            setTableMessage("");
-            saveTable.reset();
-          }}
-          onSubmit={submitTable}
-        >
-          <label className="choice-card">
-            <span className="choice-card__copy">
-              <strong>显示非本周课程</strong>
-              <span>在每天的课表中保留其他周课程并标记状态</span>
-            </span>
-            <input
-              type="checkbox"
-              name="display_not_current_week_courses"
-              defaultChecked={table.data!.setting.display_not_current_week_courses}
-            />
-            <span className="choice-card__surface" aria-hidden="true" />
-          </label>
-          {saveTable.isError ? (
-            <StatusMessage tone="danger">{saveTable.error.message}</StatusMessage>
-          ) : null}
-          {tableMessage ? <StatusMessage tone="success">{tableMessage}</StatusMessage> : null}
-          <button
-            className="button button--secondary button--block"
-            type="submit"
-            disabled={saveTable.isPending}
-          >
-            {saveTable.isPending ? "正在保存…" : "保存课表设置"}
-          </button>
-        </form>
+        <QueryState query={table} loadingRows={2}>
+          {(tableSetting) => (
+            <form
+              className="form"
+              key={tableSetting.version}
+              onChange={() => {
+                setTableMessage("");
+                saveTable.reset();
+              }}
+              onSubmit={(event) => submitTable(event, tableSetting)}
+            >
+              <label className="choice-card">
+                <span className="choice-card__copy">
+                  <strong>显示非本周课程</strong>
+                  <span>在每天的课表中保留其他周课程并标记状态</span>
+                </span>
+                <input
+                  type="checkbox"
+                  name="display_not_current_week_courses"
+                  defaultChecked={tableSetting.setting.display_not_current_week_courses}
+                />
+                <span className="choice-card__surface" aria-hidden="true" />
+              </label>
+              {saveTable.isError ? (
+                <StatusMessage tone="danger">{saveTable.error.message}</StatusMessage>
+              ) : null}
+              {tableMessage ? <StatusMessage tone="success">{tableMessage}</StatusMessage> : null}
+              <button
+                className="button button--secondary button--block"
+                type="submit"
+                disabled={saveTable.isPending}
+              >
+                {saveTable.isPending ? "正在保存…" : "保存课表设置"}
+              </button>
+            </form>
+          )}
+        </QueryState>
       </Section>
     </div>
   );

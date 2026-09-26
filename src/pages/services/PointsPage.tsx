@@ -1,14 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Flame, Gift } from "lucide-react";
+import { CheckCircle2, Flame, Gift, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/api";
 import type { Goods } from "../../api/types";
 import {
   ConfirmDialog,
   EmptyState,
-  PageError,
   PageHeader,
-  PageSkeleton,
+  QueryState,
   Section,
   StatusMessage,
 } from "../../components/ui";
@@ -76,144 +75,171 @@ export default function PointsPage() {
       ]);
     },
   });
-  const queries = [summary, description, records, goods, exchanged];
-
-  if (queries.some((query) => query.isPending))
-    return (
-      <div className="page">
-        <PageSkeleton rows={8} />
-      </div>
-    );
-  const failed = queries.find((query) => query.isError);
-  if (failed) {
-    return (
-      <div className="page">
-        <PageHeader title="积分中心" back />
-        <PageError
-          error={failed.error}
-          onRetry={() => void Promise.all(queries.map((query) => query.refetch()))}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="page">
-      <PageHeader title="积分中心" description={description.data!.description} back />
+      <PageHeader
+        title="积分中心"
+        description={description.data?.description}
+        back
+        action={
+          description.isError ? (
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="重新加载积分说明"
+              onClick={() => void description.refetch()}
+            >
+              <RotateCcw aria-hidden="true" />
+            </button>
+          ) : null
+        }
+      />
 
-      <div className="summary-band surface">
-        <div>
-          <p className="muted text-sm">可用积分</p>
-          <p className="summary-band__value">{formatNumber(summary.data!.jifen)}</p>
-          <p className="muted text-sm cluster gap-4">
-            <Flame aria-hidden="true" />
-            连续 {summary.data!.combo} 天
-          </p>
-        </div>
-        <button
-          className="button button--primary"
-          type="button"
-          disabled={summary.data!.is_checked || checkIn.isPending}
-          onClick={() => checkIn.mutate()}
-        >
-          <CheckCircle2 aria-hidden="true" />
-          {checkIn.isPending ? "签到中…" : summary.data!.is_checked ? "今日已签到" : "签到"}
-        </button>
-      </div>
-      {message ? <StatusMessage tone="success">{message}</StatusMessage> : null}
-      {checkIn.isError ? (
-        <StatusMessage tone="danger">{checkIn.error.message}</StatusMessage>
-      ) : null}
+      <QueryState query={summary} loadingRows={2}>
+        {(points) => (
+          <>
+            <div className="summary-band surface">
+              <div>
+                <p className="muted text-sm">可用积分</p>
+                <p className="summary-band__value">{formatNumber(points.jifen)}</p>
+                <p className="muted text-sm cluster gap-4">
+                  <Flame aria-hidden="true" />
+                  连续 {points.combo} 天
+                </p>
+              </div>
+              <button
+                className="button button--primary"
+                type="button"
+                disabled={points.is_checked || checkIn.isPending}
+                onClick={() => checkIn.mutate()}
+              >
+                <CheckCircle2 aria-hidden="true" />
+                {checkIn.isPending ? "签到中…" : points.is_checked ? "今日已签到" : "签到"}
+              </button>
+            </div>
+            {message ? <StatusMessage tone="success">{message}</StatusMessage> : null}
+            {checkIn.isError ? (
+              <StatusMessage tone="danger">{checkIn.error.message}</StatusMessage>
+            ) : null}
+          </>
+        )}
+      </QueryState>
 
       <Section title="积分好物">
-        {goods.data!.length ? (
-          <div className="surface list">
-            {goods.data!.map((item) => (
-              <article className="goods-item" key={item.id}>
-                <GoodsImage src={item.cover} alt={item.name} />
-                <div className="stack gap-8 min-w-0">
-                  <div className="cluster spread gap-8">
-                    <div className="min-w-0">
-                      <h3 className="text-clamp-2">{item.name}</h3>
-                      <p className="muted text-sm">{item.description || "暂无说明"}</p>
+        <QueryState query={goods} loadingRows={4}>
+          {(items) =>
+            items.length ? (
+              <div className="surface list">
+                {items.map((item) => (
+                  <article className="goods-item" key={item.id}>
+                    <GoodsImage src={item.cover} alt={item.name} />
+                    <div className="stack gap-8 min-w-0">
+                      <div className="cluster spread gap-8">
+                        <div className="min-w-0">
+                          <h3 className="text-clamp-2">{item.name}</h3>
+                          <p className="muted text-sm">{item.description || "暂无说明"}</p>
+                        </div>
+                        <strong className="text-danger tabular">{item.price} 分</strong>
+                      </div>
+                      <div className="cluster spread">
+                        <span className="muted text-sm">库存 {item.count}</span>
+                        <button
+                          className="button button--secondary button--small"
+                          type="button"
+                          disabled={item.count <= 0}
+                          onClick={() => setSelectedGoods(item)}
+                        >
+                          兑换
+                        </button>
+                      </div>
                     </div>
-                    <strong className="text-danger tabular">{item.price} 分</strong>
-                  </div>
-                  <div className="cluster spread">
-                    <span className="muted text-sm">库存 {item.count}</span>
-                    <button
-                      className="button button--secondary button--small"
-                      type="button"
-                      disabled={item.count <= 0}
-                      onClick={() => setSelectedGoods(item)}
-                    >
-                      兑换
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="暂无可兑换奖品" description="新的积分好物会在这里上架。" icon={Gift} />
-        )}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title="暂无可兑换奖品"
+                description="新的积分好物会在这里上架。"
+                icon={Gift}
+              />
+            )
+          }
+        </QueryState>
       </Section>
 
-      <Section title="积分记录" description={`共 ${records.data!.total} 条`}>
-        {records.data!.records.length ? (
-          <div className="surface list">
-            {records.data!.records.map((record) => (
-              <div className="record-item cluster spread gap-12" key={record.id}>
-                <div className="min-w-0">
-                  <h3>{record.description}</h3>
-                  <time className="muted text-sm">{formatDateTime(record.created_at)}</time>
+      <Section
+        title="积分记录"
+        description={records.data ? `共 ${records.data.total} 条` : undefined}
+      >
+        <QueryState query={records} loadingRows={4}>
+          {(recordPage) => (
+            <>
+              {recordPage.records.length ? (
+                <div className="surface list">
+                  {recordPage.records.map((record) => (
+                    <div className="record-item cluster spread gap-12" key={record.id}>
+                      <div className="min-w-0">
+                        <h3>{record.description}</h3>
+                        <time className="muted text-sm">{formatDateTime(record.created_at)}</time>
+                      </div>
+                      <strong
+                        className={
+                          record.jifen >= 0 ? "text-success tabular" : "text-danger tabular"
+                        }
+                      >
+                        {record.jifen >= 0 ? "+" : ""}
+                        {record.jifen}
+                      </strong>
+                    </div>
+                  ))}
                 </div>
-                <strong
-                  className={record.jifen >= 0 ? "text-success tabular" : "text-danger tabular"}
+              ) : (
+                <EmptyState title="暂无积分记录" description="签到或兑换后会生成积分流水。" />
+              )}
+              {recordPage.total > recordPage.records.length ? (
+                <button
+                  className="button button--secondary button--block"
+                  type="button"
+                  disabled={records.isFetching}
+                  onClick={() => setRecordSize((size) => size + 20)}
                 >
-                  {record.jifen >= 0 ? "+" : ""}
-                  {record.jifen}
-                </strong>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="暂无积分记录" description="签到或兑换后会生成积分流水。" />
-        )}
-        {records.data!.total > records.data!.records.length ? (
-          <button
-            className="button button--secondary button--block"
-            type="button"
-            disabled={records.isFetching}
-            onClick={() => setRecordSize((size) => size + 20)}
-          >
-            {records.isFetching ? "正在加载…" : "加载更多记录"}
-          </button>
-        ) : null}
+                  {records.isFetching ? "正在加载…" : "加载更多记录"}
+                </button>
+              ) : null}
+            </>
+          )}
+        </QueryState>
       </Section>
 
       <Section title="已兑换">
-        {exchanged.data!.length ? (
-          <div className="surface list">
-            {exchanged.data!.map((item) => (
-              <article className="goods-item" key={item.id}>
-                <GoodsImage src={item.goods_cover} alt={item.goods_name} />
-                <div className="min-w-0">
-                  <h3>{item.goods_name}</h3>
-                  <p className="muted text-sm">{item.goods_description}</p>
-                  <p className="muted text-sm">兑换于 {formatDateTime(item.created_at)}</p>
-                  <span
-                    className={`badge ${item.receive_time ? "badge--success" : "badge--warning"}`}
-                  >
-                    {item.receive_time ? `已领取 · ${formatDateTime(item.receive_time)}` : "待领取"}
-                  </span>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="还没有兑换记录" description="兑换成功的奖品会显示在这里。" />
-        )}
+        <QueryState query={exchanged} loadingRows={3}>
+          {(items) =>
+            items.length ? (
+              <div className="surface list">
+                {items.map((item) => (
+                  <article className="goods-item" key={item.id}>
+                    <GoodsImage src={item.goods_cover} alt={item.goods_name} />
+                    <div className="min-w-0">
+                      <h3>{item.goods_name}</h3>
+                      <p className="muted text-sm">{item.goods_description}</p>
+                      <p className="muted text-sm">兑换于 {formatDateTime(item.created_at)}</p>
+                      <span
+                        className={`badge ${item.receive_time ? "badge--success" : "badge--warning"}`}
+                      >
+                        {item.receive_time
+                          ? `已领取 · ${formatDateTime(item.receive_time)}`
+                          : "待领取"}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="还没有兑换记录" description="兑换成功的奖品会显示在这里。" />
+            )
+          }
+        </QueryState>
       </Section>
 
       {selectedGoods ? (

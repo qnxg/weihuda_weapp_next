@@ -12,6 +12,7 @@ export interface EndpointDefinition {
 export const endpointCatalog = [
   { id: "system.health", method: "GET", path: "/", auth: "public", consumer: "/about" },
   { id: "system.about", method: "GET", path: "/about", auth: "public", consumer: "/about" },
+  { id: "countdown.get", method: "GET", path: "/countdown", auth: "public", consumer: "/" },
   { id: "auth.login", method: "POST", path: "/auth/login", auth: "public", consumer: "/login" },
   {
     id: "auth.refresh",
@@ -29,7 +30,7 @@ export const endpointCatalog = [
     consumer: "/login",
   },
   { id: "auth.unbind", method: "POST", path: "/auth/unbind", auth: "required", consumer: "/me" },
-  { id: "me.get", method: "GET", path: "/me", auth: "required", consumer: "/,/me" },
+  { id: "me.get", method: "GET", path: "/me", auth: "required", consumer: "/me" },
   {
     id: "settings.all",
     method: "GET",
@@ -42,7 +43,7 @@ export const endpointCatalog = [
     method: "GET",
     path: "/me/setting/{type}",
     auth: "required",
-    consumer: "/settings",
+    consumer: "/,/schedule,/settings",
   },
   {
     id: "settings.update",
@@ -70,28 +71,28 @@ export const endpointCatalog = [
     method: "GET",
     path: "/rank",
     auth: "required",
-    consumer: "/services/grades",
+    consumer: "/services/rank",
   },
   {
     id: "rank.ca",
     method: "GET",
     path: "/rank/ca",
     auth: "required",
-    consumer: "/services/grades",
+    consumer: "/services/rank",
   },
   {
     id: "rank.ca.refresh",
     method: "PUT",
     path: "/rank/ca",
     auth: "required",
-    consumer: "/services/grades",
+    consumer: "/services/rank",
   },
   {
     id: "course.table",
     method: "GET",
     path: "/classtable",
     auth: "required",
-    consumer: "/schedule",
+    consumer: "/,/schedule",
   },
   {
     id: "course.extra",
@@ -125,15 +126,15 @@ export const endpointCatalog = [
     id: "semester.get",
     method: "GET",
     path: "/semester",
-    auth: "required",
-    consumer: "/,/schedule",
+    auth: "public",
+    consumer: "/,/schedule,/services/grades,/services/rank",
   },
   {
     id: "points.summary",
     method: "GET",
     path: "/jifen",
     auth: "required",
-    consumer: "/services/points",
+    consumer: "/,/services/points",
   },
   {
     id: "points.checkin",
@@ -177,7 +178,13 @@ export const endpointCatalog = [
     auth: "required",
     consumer: "/services/points",
   },
-  { id: "email.unread", method: "GET", path: "/email", auth: "required", consumer: "/services" },
+  {
+    id: "email.unread",
+    method: "GET",
+    path: "/email",
+    auth: "required",
+    consumer: "/,/services",
+  },
   { id: "dorm.info", method: "GET", path: "/dorm", auth: "required", consumer: "/services/dorm" },
   {
     id: "dorm.refresh",
@@ -191,7 +198,7 @@ export const endpointCatalog = [
     method: "GET",
     path: "/dorm/electricity",
     auth: "required",
-    consumer: "/services/dorm",
+    consumer: "/,/services/dorm",
   },
   {
     id: "dorm.electricity.refresh",
@@ -205,7 +212,7 @@ export const endpointCatalog = [
     method: "GET",
     path: "/grade",
     auth: "required",
-    consumer: "/services/grades",
+    consumer: "/,/services/grades",
   },
   {
     id: "grade.detail",
@@ -219,7 +226,7 @@ export const endpointCatalog = [
     method: "GET",
     path: "/netflow",
     auth: "required",
-    consumer: "/services/network",
+    consumer: "/,/services/network",
   },
   {
     id: "netflow.orders",
@@ -240,9 +247,15 @@ export const endpointCatalog = [
     method: "GET",
     path: "/announcement",
     auth: "required",
-    consumer: "/services/announcements",
+    consumer: "/,/services/announcements",
   },
-  { id: "exam.list", method: "GET", path: "/exam", auth: "required", consumer: "/services/exams" },
+  {
+    id: "exam.list",
+    method: "GET",
+    path: "/exam",
+    auth: "required",
+    consumer: "/,/services/exams",
+  },
   {
     id: "exam.create",
     method: "POST",
@@ -328,7 +341,13 @@ export const endpointCatalog = [
     auth: "required",
     consumer: "/services/lab",
   },
-  { id: "notice.list", method: "GET", path: "/notice", auth: "required", consumer: "/notices" },
+  {
+    id: "notice.list",
+    method: "GET",
+    path: "/notice",
+    auth: "required",
+    consumer: "/,/notices",
+  },
   {
     id: "notice.read",
     method: "PUT",

@@ -7,7 +7,14 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export function PageHeader({
@@ -131,6 +138,40 @@ export function PageError({ error, onRetry }: { error: unknown; onRetry?: () => 
   );
 }
 
+interface QueryStateSource<T> {
+  data: T | undefined;
+  error: unknown;
+  isError: boolean;
+  isPending: boolean;
+  refetch: () => unknown;
+}
+
+export function QueryState<T>({
+  query,
+  children,
+  loadingRows = 3,
+}: {
+  query: QueryStateSource<T>;
+  children: (data: T) => ReactNode;
+  loadingRows?: number;
+}) {
+  if (query.data !== undefined) {
+    return (
+      <>
+        {children(query.data)}
+        {query.isError ? (
+          <PageError error={query.error} onRetry={() => void query.refetch()} />
+        ) : null}
+      </>
+    );
+  }
+  if (query.isPending) return <PageSkeleton rows={loadingRows} />;
+  if (query.isError) {
+    return <PageError error={query.error} onRetry={() => void query.refetch()} />;
+  }
+  return null;
+}
+
 export function EmptyState({
   title,
   description,
@@ -155,27 +196,22 @@ export function EmptyState({
 export function AuthPrompt({
   title = "登录后查看",
   description = "这里包含你的个人校园数据，登录后即可继续。",
+  headingLevel = 2,
 }: {
   title?: string;
   description?: string;
+  headingLevel?: 2 | 3;
 }) {
   const { pathname, search, hash } = useLocation();
   const returnTo = `${pathname}${search}${hash}`;
 
   return (
     <div className="auth-prompt">
-      <span className="auth-prompt__icon">
-        <LockKeyhole aria-hidden="true" />
-      </span>
-      <div className="stack gap-4">
-        <h2>{title}</h2>
-        <p>{description}</p>
-      </div>
-      <Link
-        className="button button--primary"
-        to={`/login?returnTo=${encodeURIComponent(returnTo)}`}
-      >
-        登录
+      <LockKeyhole aria-hidden="true" />
+      {headingLevel === 3 ? <h3>{title}</h3> : <h2>{title}</h2>}
+      <p>{description}</p>
+      <Link className="button button--text" to={`/login?returnTo=${encodeURIComponent(returnTo)}`}>
+        去登录
       </Link>
     </div>
   );
@@ -234,6 +270,17 @@ export function Modal({
     }
   }
 
+  function closeFromBackdrop(event: ReactMouseEvent<HTMLDialogElement>) {
+    if (event.target !== event.currentTarget) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const insideDialog =
+      event.clientX >= bounds.left &&
+      event.clientX <= bounds.right &&
+      event.clientY >= bounds.top &&
+      event.clientY <= bounds.bottom;
+    if (!insideDialog) onClose();
+  }
+
   useEffect(() => {
     triggerRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -259,6 +306,7 @@ export function Modal({
       ref={dialogRef}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
+      onClick={closeFromBackdrop}
       onKeyDown={trapFocus}
       onCancel={(event) => {
         event.preventDefault();
@@ -280,7 +328,7 @@ export function Modal({
           </button>
         ) : null}
       </div>
-      {children}
+      <div className="modal__body">{children}</div>
     </dialog>
   );
 }

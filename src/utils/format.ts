@@ -1,6 +1,5 @@
 import type { Semester } from "../api/types";
 
-const DAY_MS = 86_400_000;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
@@ -17,6 +16,22 @@ const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   hour12: false,
 });
 
+const fullDateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const shanghaiDateKeyFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 const weekdayCharacters = ["日", "一", "二", "三", "四", "五", "六"];
 const numberFormatter = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 });
 const currencyFormatter = new Intl.NumberFormat("zh-CN", {
@@ -26,24 +41,12 @@ const currencyFormatter = new Intl.NumberFormat("zh-CN", {
 
 export const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
-export interface SemesterCountdown {
-  status: "upcoming" | "active" | "completed";
-  days: number;
-  target: Date;
-}
-
-function calendarDayValue(date: Date) {
-  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function calendarDaysBetween(from: Date, to: Date) {
-  return Math.round((calendarDayValue(to) - calendarDayValue(from)) / DAY_MS);
-}
-
 export function parseApiDate(value: string) {
   const normalized = DATE_ONLY_PATTERN.test(value)
     ? `${value}T00:00:00`
-    : value.includes("T") ? value : value.replace(" ", "T");
+    : value.includes("T")
+      ? value
+      : value.replace(" ", "T");
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? null : date;
 }
@@ -57,9 +60,24 @@ export function formatDateHeading(date = new Date()) {
   return `${date.getMonth() + 1} 月 ${date.getDate()} 日 星期${weekdayCharacters[date.getDay()]}`;
 }
 
+export function formatShanghaiDateKey(date = new Date()) {
+  const parts = Object.fromEntries(
+    shanghaiDateKeyFormatter
+      .formatToParts(date)
+      .filter(({ type }) => type !== "literal")
+      .map(({ type, value }) => [type, value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 export function formatDateTime(value: string) {
   const date = parseApiDate(value);
   return date ? dateTimeFormatter.format(date) : value;
+}
+
+export function formatDateTimeWithYear(value: string) {
+  const date = parseApiDate(value);
+  return date ? fullDateTimeFormatter.format(date) : value;
 }
 
 export function formatNumber(value: number) {
@@ -92,29 +110,6 @@ export function isDateInSemester(semester: Semester, date = new Date()) {
   const current = new Date(date);
   current.setHours(0, 0, 0, 0);
   return current >= start && current < end;
-}
-
-export function getSemesterCountdown(
-  semester: Semester,
-  now = new Date(),
-): SemesterCountdown | null {
-  const start = parseApiDate(semester.start);
-  if (!start) return null;
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + semester.weeks * 7);
-
-  const daysUntilStart = calendarDaysBetween(now, start);
-  if (daysUntilStart > 0) {
-    return { status: "upcoming", days: daysUntilStart, target: start };
-  }
-
-  const daysUntilEnd = calendarDaysBetween(now, end);
-  if (daysUntilEnd > 0) {
-    return { status: "active", days: daysUntilEnd, target: end };
-  }
-
-  return { status: "completed", days: 0, target: end };
 }
 
 export function dateForSemesterDay(semester: Semester, week: number, day: number) {

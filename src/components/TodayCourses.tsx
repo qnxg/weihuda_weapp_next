@@ -11,9 +11,91 @@ import {
   groupCourseSessions,
   shouldDefaultToTomorrow,
 } from "../utils/course";
-import { EmptyState } from "./ui";
+import { AuthPrompt, EmptyState } from "./ui";
 
 type SelectedDay = "today" | "tomorrow";
+
+function CourseDayTabs({
+  selectedDay,
+  onSelect,
+}: {
+  selectedDay: SelectedDay;
+  onSelect: (day: SelectedDay) => void;
+}) {
+  const todayTabRef = useRef<HTMLButtonElement>(null);
+  const tomorrowTabRef = useRef<HTMLButtonElement>(null);
+
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    let nextDay: SelectedDay | null = null;
+    if (event.key === "ArrowLeft") nextDay = selectedDay === "today" ? "tomorrow" : "today";
+    if (event.key === "ArrowRight") nextDay = selectedDay === "tomorrow" ? "today" : "tomorrow";
+    if (event.key === "Home") nextDay = "today";
+    if (event.key === "End") nextDay = "tomorrow";
+    if (!nextDay) return;
+
+    event.preventDefault();
+    onSelect(nextDay);
+    (nextDay === "today" ? todayTabRef : tomorrowTabRef).current?.focus();
+  }
+
+  return (
+    <div className="course-day-tabs" role="tablist" aria-label="选择课程日期">
+      <button
+        className={`course-day-tab${selectedDay === "today" ? " is-active" : ""}`}
+        id="course-tab-today"
+        ref={todayTabRef}
+        type="button"
+        role="tab"
+        aria-controls="course-day-panel"
+        aria-selected={selectedDay === "today"}
+        tabIndex={selectedDay === "today" ? 0 : -1}
+        onClick={() => onSelect("today")}
+        onKeyDown={handleKeyDown}
+      >
+        今日课程
+      </button>
+      <button
+        className={`course-day-tab${selectedDay === "tomorrow" ? " is-active" : ""}`}
+        id="course-tab-tomorrow"
+        ref={tomorrowTabRef}
+        type="button"
+        role="tab"
+        aria-controls="course-day-panel"
+        aria-selected={selectedDay === "tomorrow"}
+        tabIndex={selectedDay === "tomorrow" ? 0 : -1}
+        onClick={() => onSelect("tomorrow")}
+        onKeyDown={handleKeyDown}
+      >
+        明日课程
+      </button>
+    </div>
+  );
+}
+
+export function TodayCoursesAuthPrompt() {
+  const [selectedDay, setSelectedDay] = useState<SelectedDay>("today");
+
+  return (
+    <section className="section today-courses stack gap-12" aria-labelledby="today-courses-heading">
+      <h2 className="sr-only" id="today-courses-heading">
+        今日与明日课程
+      </h2>
+      <CourseDayTabs selectedDay={selectedDay} onSelect={setSelectedDay} />
+      <div
+        className="course-day-panel"
+        id="course-day-panel"
+        role="tabpanel"
+        aria-labelledby={`course-tab-${selectedDay}`}
+      >
+        <AuthPrompt
+          headingLevel={3}
+          title={`登录后查看${selectedDay === "today" ? "今日" : "明日"}课程`}
+          description="课程表属于个人校园数据，登录后可查看今日与明日安排。"
+        />
+      </div>
+    </section>
+  );
+}
 
 export function TodayCourses({
   todayCourses,
@@ -30,8 +112,6 @@ export function TodayCourses({
 }) {
   const todaySessions = groupCourseSessions(todayCourses);
   const tomorrowSessions = groupCourseSessions(tomorrowCourses);
-  const todayTabRef = useRef<HTMLButtonElement>(null);
-  const tomorrowTabRef = useRef<HTMLButtonElement>(null);
   const defaultToTomorrow = shouldDefaultToTomorrow(todaySessions, today, now);
   const [manualSelection, setManualSelection] = useState<SelectedDay | null>(null);
   const selectedDay = manualSelection ?? (defaultToTomorrow ? "tomorrow" : "today");
@@ -47,52 +127,12 @@ export function TodayCourses({
     setManualSelection(day);
   }
 
-  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    let nextDay: SelectedDay | null = null;
-    if (event.key === "ArrowLeft" || event.key === "Home") nextDay = "today";
-    if (event.key === "ArrowRight" || event.key === "End") nextDay = "tomorrow";
-    if (!nextDay) return;
-
-    event.preventDefault();
-    selectDay(nextDay);
-    (nextDay === "today" ? todayTabRef : tomorrowTabRef).current?.focus();
-  }
-
   return (
     <section className="section today-courses stack gap-12" aria-labelledby="today-courses-heading">
       <h2 className="sr-only" id="today-courses-heading">
         今日与明日课程
       </h2>
-      <div className="course-day-tabs" role="tablist" aria-label="选择课程日期">
-        <button
-          className={`course-day-tab${selectedDay === "today" ? " is-active" : ""}`}
-          id="course-tab-today"
-          ref={todayTabRef}
-          type="button"
-          role="tab"
-          aria-controls="course-day-panel"
-          aria-selected={selectedDay === "today"}
-          tabIndex={selectedDay === "today" ? 0 : -1}
-          onClick={() => selectDay("today")}
-          onKeyDown={handleTabKeyDown}
-        >
-          今日课程
-        </button>
-        <button
-          className={`course-day-tab${selectedDay === "tomorrow" ? " is-active" : ""}`}
-          id="course-tab-tomorrow"
-          ref={tomorrowTabRef}
-          type="button"
-          role="tab"
-          aria-controls="course-day-panel"
-          aria-selected={selectedDay === "tomorrow"}
-          tabIndex={selectedDay === "tomorrow" ? 0 : -1}
-          onClick={() => selectDay("tomorrow")}
-          onKeyDown={handleTabKeyDown}
-        >
-          明日课程
-        </button>
-      </div>
+      <CourseDayTabs selectedDay={selectedDay} onSelect={selectDay} />
 
       <div
         className="course-day-panel"

@@ -12,10 +12,10 @@ import {
   Gift,
   GraduationCap,
   HelpCircle,
-  LockKeyhole,
   Mail,
   Megaphone,
   RotateCcw,
+  Trophy,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../api/api";
@@ -25,9 +25,9 @@ import { PageHeader, Section, StatusMessage } from "../components/ui";
 const groups = [
   {
     title: "学习",
-    tone: "blue",
     items: [
-      { id: "grades", title: "成绩与排名", meta: "成绩构成、绩点与排名", icon: GraduationCap },
+      { id: "grades", title: "课程成绩", meta: "成绩构成、学分与绩点", icon: GraduationCap },
+      { id: "rank", title: "成绩排名", meta: "算术、加权与 GPA 排名", icon: Trophy },
       { id: "exams", title: "考试安排", meta: "考场、时间与座位", icon: ClipboardList },
       { id: "rooms", title: "空教室", meta: "按日期和节次查询", icon: Building2 },
       { id: "lab", title: "大物实验", meta: "安排与实验成绩", icon: FlaskConical },
@@ -36,7 +36,6 @@ const groups = [
   },
   {
     title: "校园生活",
-    tone: "green",
     items: [
       { id: "card", title: "校园卡", meta: "余额与消费记录", icon: CreditCard },
       { id: "dorm", title: "宿舍电量", meta: "寝室信息与剩余电量", icon: BedDouble },
@@ -46,7 +45,6 @@ const groups = [
   },
   {
     title: "权益与支持",
-    tone: "amber",
     items: [
       { id: "points", title: "积分中心", meta: "签到、记录与奖品", icon: Gift },
       {
@@ -54,14 +52,12 @@ const groups = [
         title: "问题反馈",
         meta: "提交问题并跟踪进度",
         icon: HelpCircle,
-        public: true,
       },
       {
         id: "about",
         title: "关于微生活",
         meta: "版本与项目链接",
         icon: BookOpenCheck,
-        public: true,
       },
     ],
   },
@@ -76,7 +72,7 @@ export default function ServicesPage() {
   });
 
   return (
-    <div className="page">
+    <div className="page services-page">
       <PageHeader title="服务" description="校园事务集中查询" />
 
       {isAuthenticated ? (
@@ -112,20 +108,17 @@ export default function ServicesPage() {
       {groups.map((group) => (
         <Section title={group.title} key={group.title}>
           <div className="service-grid">
-            {group.items.map(({ id, title, meta, icon: Icon, public: isPublic }) => (
+            {group.items.map(({ id, title, meta, icon: Icon }) => (
               <Link
                 className="service-item"
                 key={id}
                 to={id === "feedback" || id === "about" ? `/${id}` : `/services/${id}`}
               >
-                <span className={`service-item__icon service-item__icon--${group.tone}`}>
+                <span className="service-item__icon">
                   <Icon aria-hidden="true" />
                 </span>
                 <span className="service-item__title text-clamp-2">{title}</span>
                 <span className="service-item__meta text-clamp-2">{meta}</span>
-                {!isAuthenticated && !isPublic ? (
-                  <LockKeyhole className="service-item__lock" aria-label="需要登录" />
-                ) : null}
               </Link>
             ))}
           </div>
@@ -136,7 +129,6 @@ export default function ServicesPage() {
         <Link className="surface menu-link" to="/services/points">
           <Award aria-hidden="true" />
           <span>查看积分与连续签到</span>
-          {!isAuthenticated ? <LockKeyhole aria-label="需要登录" /> : null}
         </Link>
       </Section>
     </div>

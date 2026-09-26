@@ -1,6 +1,6 @@
 # 微生活 API Mock Server
 
-基于 Apifox 项目 `8872112` 主分支的 57 个 HTTP 接口生成。服务使用 Node.js
+基于 Apifox 项目 `8872112` 主分支的 58 个 HTTP 接口生成。服务使用 Node.js
 内置模块，无第三方依赖。
 
 ## 启动
@@ -11,10 +11,10 @@
 npm start
 ```
 
-默认地址为 `http://127.0.0.1:3000`。可通过环境变量修改：
+默认地址为 `http://127.0.0.1:3100`。可通过环境变量修改：
 
 ```bash
-MOCK_HOST=0.0.0.0 MOCK_PORT=3100 npm start
+MOCK_HOST=0.0.0.0 MOCK_PORT=3200 npm start
 ```
 
 开发模式：
@@ -28,25 +28,30 @@ npm run dev
 - 所有请求默认随机延迟 `500–1000ms`，用于模拟弱网抖动。
 - `X-Mock-Status: 503`：强制任意已注册接口返回指定的 4xx/5xx 状态码。
 - `X-Mock-Delay: 1500`：覆盖随机值并延迟 1500 毫秒，上限 10 秒；传 `0` 可关闭本次请求的延迟。
+- `X-Mock-Date: 2026-09-23`：仅为 `GET /countdown` 固定计算日期，便于验证状态边界。
 - 响应头 `X-Mock-Delay` 会返回本次请求实际应用的延迟毫秒数。
-- 除登录、刷新 token、匿名反馈和元数据外，其余接口要求 `Authorization: Bearer <token>`。
+- 除登录、刷新 token、匿名反馈、元数据、倒计时和学期信息外，其余接口要求 `Authorization: Bearer <token>`。
 - 服务允许跨域请求。
 - 设置、自定义课程、自定义考试、反馈、签到和通知已读状态保存在进程内存中，重启后重置。
 - `GET /img/{id}` 返回一个有效的 PNG 文件。
 - `GET /classtable` 提供周一至周日的连续双节课程；周三覆盖上午、下午和晚间时段，可配合固定浏览器时间验证已结束、开课前 20 分钟、上课中和未开始状态。
+- `GET /rank` 与 `GET /rank/ca` 会为全部、必修、核心课程分别随机返回“成绩和排名都有、仅成绩、仅排名、均无”之一；同一课程类型内三个指标的成绩字段和排名字段分别保持整体存在或整体缺失。
 
 ## 示例
 
 ```bash
-curl http://127.0.0.1:3000/me \
+curl http://127.0.0.1:3100/me \
   -H 'Authorization: Bearer mock-access-token'
 
-curl -X PUT http://127.0.0.1:3000/me/setting/table \
+curl http://127.0.0.1:3100/countdown \
+  -H 'X-Mock-Date: 2026-09-23'
+
+curl -X PUT http://127.0.0.1:3100/me/setting/table \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer mock-access-token' \
   -d '{"version":2,"setting":{"display_not_current_week_courses":false}}'
 
-curl http://127.0.0.1:3000/empty_room \
+curl http://127.0.0.1:3100/empty_room \
   --get \
   -H 'Authorization: Bearer mock-access-token' \
   --data-urlencode 'building_id=001' \

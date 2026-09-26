@@ -1,13 +1,21 @@
 import { BookOpenText, CalendarRange, PartyPopper, type LucideIcon } from "lucide-react";
-import type { Semester } from "../api/types";
-import { getSemesterCountdown, termName } from "../utils/format";
-import { formatHolidayRange, getHolidayCountdown } from "../utils/holiday";
+import type { CountdownInfo, HolidayCountdownInfo, SemesterCountdownInfo } from "../api/types";
+import { termName } from "../utils/format";
 import { Section } from "./ui";
 
 type CountdownTone = "warning" | "success" | "info" | "neutral";
 
-function formatMonthDay(date: Date) {
-  return `${date.getMonth() + 1} 月 ${date.getDate()} 日`;
+function formatMonthDay(value: string) {
+  const [, month, day] = value.split("-").map(Number);
+  return month && day ? `${month} 月 ${day} 日` : value;
+}
+
+function formatHolidayRange(holiday: HolidayCountdownInfo) {
+  const start = formatMonthDay(holiday.start);
+  const end = formatMonthDay(holiday.end);
+  const [, startMonth] = holiday.start.split("-").map(Number);
+  const [, endMonth, endDay] = holiday.end.split("-").map(Number);
+  return startMonth === endMonth && endDay ? `${start}至 ${endDay} 日` : `${start}至 ${end}`;
 }
 
 function CountdownItem({
@@ -53,7 +61,9 @@ function CountdownItem({
         {metricValue === undefined ? (
           <strong className="countdown-item__metric-text">{metricText}</strong>
         ) : (
-          <p><strong>{metricValue}</strong> 天</p>
+          <p>
+            <strong>{metricValue}</strong> 天
+          </p>
         )}
         {footnote ? <small>{footnote}</small> : null}
       </div>
@@ -61,8 +71,7 @@ function CountdownItem({
   );
 }
 
-function HolidayCountdownItem({ now }: { now: Date }) {
-  const countdown = getHolidayCountdown(now);
+function HolidayCountdownItem({ countdown }: { countdown: HolidayCountdownInfo | null }) {
   if (!countdown) {
     return (
       <CountdownItem
@@ -77,52 +86,44 @@ function HolidayCountdownItem({ now }: { now: Date }) {
     );
   }
 
-  const { holiday, status, daysUntil, daysRemaining, duration } = countdown;
-  const isActive = status === "active";
-  const count = isActive ? daysRemaining : daysUntil;
+  const isActive = countdown.status === "active";
+  const dateRange = formatHolidayRange(countdown);
   const ariaLabel = isActive
-    ? `${holiday.name}假期进行中，剩余 ${count} 天，${formatHolidayRange(holiday)}，共 ${duration} 天`
-    : `距离${holiday.name}还有 ${count} 天，${formatHolidayRange(holiday)}，共 ${duration} 天`;
+    ? `${countdown.name}假期进行中，剩余 ${countdown.days} 天，${dateRange}，共 ${countdown.duration} 天`
+    : `距离${countdown.name}还有 ${countdown.days} 天，${dateRange}，共 ${countdown.duration} 天`;
 
   return (
     <CountdownItem
       icon={PartyPopper}
       tone={isActive ? "success" : "warning"}
       eyebrow={isActive ? "假期进行中" : "距离假期"}
-      title={holiday.name}
-      detail={`${formatHolidayRange(holiday)} · ${duration} 天`}
+      title={countdown.name}
+      detail={`${dateRange} · ${countdown.duration} 天`}
       metricLabel={isActive ? "剩余" : "还有"}
-      metricValue={count}
+      metricValue={countdown.days}
       footnote={isActive ? "含今天" : undefined}
       ariaLabel={ariaLabel}
     />
   );
 }
 
-function SemesterCountdownItem({
-  semester,
-  now,
-}: {
-  semester: Semester;
-  now: Date;
-}) {
-  const countdown = getSemesterCountdown(semester, now);
-  const title = `${semester.xn} ${termName(semester.xq)}`;
+function SemesterCountdownItem({ countdown }: { countdown: SemesterCountdownInfo | null }) {
   if (!countdown) {
     return (
       <CountdownItem
         icon={BookOpenText}
         tone="neutral"
         eyebrow="学期倒计时"
-        title={title}
-        detail="学期日期待定"
-        metricText="待确定"
-        ariaLabel={`${title}日期待定`}
+        title="暂无学期信息"
+        detail="等待后端同步学期安排"
+        metricText="待同步"
+        ariaLabel="暂无学期倒计时，等待后端同步学期安排"
       />
     );
   }
 
-  const targetDate = formatMonthDay(countdown.target);
+  const title = `${countdown.xn} ${termName(countdown.xq)}`;
+  const targetDate = formatMonthDay(countdown.target_date);
   if (countdown.status === "completed") {
     return (
       <CountdownItem
@@ -130,41 +131,34 @@ function SemesterCountdownItem({
         tone="neutral"
         eyebrow="学期倒计时"
         title={title}
-        detail={`${targetDate}已结束 · 共 ${semester.weeks} 周`}
+        detail={`${targetDate}已结束 · 共 ${countdown.weeks} 周`}
         metricText="已结束"
-        ariaLabel={`${title}已于 ${targetDate}结束，共 ${semester.weeks} 周`}
+        ariaLabel={`${title}已于 ${targetDate}结束，共 ${countdown.weeks} 周`}
       />
     );
   }
 
-  const isUpcoming = countdown.status === "upcoming";
-  const boundaryLabel = isUpcoming ? "开始" : "结束";
+  const boundaryLabel = countdown.status === "upcoming" ? "开始" : "结束";
   return (
     <CountdownItem
       icon={BookOpenText}
       tone="info"
       eyebrow={`距离学期${boundaryLabel}`}
       title={title}
-      detail={`${targetDate}${boundaryLabel} · 共 ${semester.weeks} 周`}
+      detail={`${targetDate}${boundaryLabel} · 共 ${countdown.weeks} 周`}
       metricLabel="还有"
       metricValue={countdown.days}
-      ariaLabel={`距离${title}${boundaryLabel}还有 ${countdown.days} 天，${targetDate}${boundaryLabel}，共 ${semester.weeks} 周`}
+      ariaLabel={`距离${title}${boundaryLabel}还有 ${countdown.days} 天，${targetDate}${boundaryLabel}，共 ${countdown.weeks} 周`}
     />
   );
 }
 
-export function CountdownOverview({
-  semester,
-  now = new Date(),
-}: {
-  semester: Semester;
-  now?: Date;
-}) {
+export function CountdownOverview({ data }: { data: CountdownInfo }) {
   return (
     <Section title="倒计时" className="countdown-overview">
       <div className="countdown-list">
-        <HolidayCountdownItem now={now} />
-        <SemesterCountdownItem semester={semester} now={now} />
+        <HolidayCountdownItem countdown={data.holiday} />
+        <SemesterCountdownItem countdown={data.semester} />
       </div>
     </Section>
   );

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import type { Course } from "../api/types";
-import { TodayCourses } from "./TodayCourses";
+import { TodayCourses, TodayCoursesAuthPrompt } from "./TodayCourses";
 
 function course(courseName: string, time: number, day = 3): Course {
   return {
@@ -48,6 +48,35 @@ function renderCourses(now: Date) {
 }
 
 describe("TodayCourses", () => {
+  it("keeps interactive date tabs and shows a matching login action when protected", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <TodayCoursesAuthPrompt />
+      </MemoryRouter>,
+    );
+
+    const todayTab = screen.getByRole("tab", { name: "今日课程" });
+    const tomorrowTab = screen.getByRole("tab", { name: "明日课程" });
+    expect(todayTab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { level: 3, name: "登录后查看今日课程" })).toBeVisible();
+
+    await user.click(tomorrowTab);
+
+    expect(tomorrowTab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { level: 3, name: "登录后查看明日课程" })).toBeVisible();
+
+    await user.keyboard("{ArrowRight}");
+
+    expect(todayTab).toHaveFocus();
+    expect(todayTab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { level: 3, name: "登录后查看今日课程" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "去登录" })).toHaveAttribute(
+      "href",
+      "/login?returnTo=%2F",
+    );
+  });
+
   it("switches between today and tomorrow without a full schedule button", async () => {
     const user = userEvent.setup();
     renderCourses(new Date("2026-09-23T12:00:00"));
@@ -75,6 +104,18 @@ describe("TodayCourses", () => {
     expect(tomorrowTab).toHaveFocus();
     expect(tomorrowTab).toHaveAttribute("aria-selected", "true");
     expect(todayTab).toHaveAttribute("tabindex", "-1");
+
+    await user.keyboard("{ArrowRight}");
+    expect(todayTab).toHaveFocus();
+    expect(todayTab).toHaveAttribute("aria-selected", "true");
+
+    await user.keyboard("{End}");
+    expect(tomorrowTab).toHaveFocus();
+    expect(tomorrowTab).toHaveAttribute("aria-selected", "true");
+
+    await user.keyboard("{Home}");
+    expect(todayTab).toHaveFocus();
+    expect(todayTab).toHaveAttribute("aria-selected", "true");
   });
 
   it("renders completed, warning and upcoming card styles", () => {

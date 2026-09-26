@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import http from "node:http";
 import { Buffer } from "node:buffer";
-import { fixtures, nextId, ok, state, timestamp } from "./fixtures.js";
+import { createRandomRank, fixtures, nextId, ok, state, timestamp } from "./fixtures.js";
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -11,9 +11,11 @@ const PNG = Buffer.from(
 
 const json = (data, status = 200) => ({ status, data });
 const success = () => json(ok());
-const publicRouteKeys = new Set([
+export const publicRouteKeys = new Set([
   "GET /",
   "GET /about",
+  "GET /countdown",
+  "GET /semester",
   "POST /auth/login",
   "POST /auth/refresh",
   "POST /feedback/no_auth",
@@ -21,6 +23,94 @@ const publicRouteKeys = new Set([
 const DEFAULT_MIN_DELAY_MS = 500;
 const DEFAULT_MAX_DELAY_MS = 1000;
 const MAX_OVERRIDE_DELAY_MS = 10_000;
+const DAY_MS = 86_400_000;
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const shanghaiDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function shanghaiDateKey(date = new Date()) {
+  const parts = Object.fromEntries(
+    shanghaiDateFormatter
+      .formatToParts(date)
+      .filter(({ type }) => type !== "literal")
+      .map(({ type, value }) => [type, value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function calendarDayValue(value) {
+  if (!DATE_ONLY_PATTERN.test(value)) throw new Error("INVALID_MOCK_DATE");
+  const [year, month, day] = value.split("-").map(Number);
+  const timestamp = Date.UTC(year, month - 1, day);
+  const parsed = new Date(timestamp);
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) {
+    throw new Error("INVALID_MOCK_DATE");
+  }
+  return timestamp;
+}
+
+function calendarDaysBetween(from, to) {
+  return Math.round((calendarDayValue(to) - calendarDayValue(from)) / DAY_MS);
+}
+
+function addCalendarDays(value, days) {
+  const date = new Date(calendarDayValue(value) + days * DAY_MS);
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function semesterStartDate(year, term) {
+  if (term === "spring") return `${year + 1}-02-22`;
+  if (term === "summer") return `${year + 1}-06-28`;
+  if (term === "winter") return `${year + 1}-01-04`;
+  return `${year}-09-13`;
+}
+
+export function buildCountdown(
+  currentDate,
+  semester = fixtures.semester,
+  holidays = fixtures.holidays,
+) {
+  const holiday = holidays.find((item) => calendarDaysBetween(currentDate, item.end) >= 0);
+  let holidayCountdown = null;
+  if (holiday) {
+    const daysUntilHoliday = calendarDaysBetween(currentDate, holiday.start);
+    holidayCountdown = {
+      ...holiday,
+      status: daysUntilHoliday > 0 ? "upcoming" : "active",
+      days:
+        daysUntilHoliday > 0 ? daysUntilHoliday : calendarDaysBetween(currentDate, holiday.end) + 1,
+      duration: calendarDaysBetween(holiday.start, holiday.end) + 1,
+    };
+  }
+
+  const semesterEnd = addCalendarDays(semester.start, semester.weeks * 7);
+  const daysUntilStart = calendarDaysBetween(currentDate, semester.start);
+  const daysUntilEnd = calendarDaysBetween(currentDate, semesterEnd);
+  const semesterStatus =
+    daysUntilStart > 0 ? "upcoming" : daysUntilEnd > 0 ? "active" : "completed";
+  const semesterCountdown = {
+    xn: semester.xn,
+    xq: semester.xq,
+    target_date: semesterStatus === "upcoming" ? semester.start : semesterEnd,
+    weeks: semester.weeks,
+    status: semesterStatus,
+    days: semesterStatus === "upcoming" ? daysUntilStart : Math.max(0, daysUntilEnd),
+  };
+
+  return { holiday: holidayCountdown, semester: semesterCountdown };
+}
 
 export function resolveDelay(
   headers,
@@ -55,6 +145,11 @@ const simpleRoutes = [
           slogans: ["让校园生活更简单"],
         }),
       ),
+  ],
+  [
+    "GET",
+    "/countdown",
+    ({ request }) => json(ok(buildCountdown(request.headers["x-mock-date"] || shanghaiDateKey()))),
   ],
   ["GET", "/auth/tfa", () => success()],
   ["POST", "/auth/tfa", () => success()],
@@ -105,23 +200,48 @@ const simpleRoutes = [
       );
     },
   ],
-  ["GET", "/rank", () => json(ok(fixtures.rank))],
-  ["GET", "/rank/ca", () => json(ok({ updated_at: timestamp(), rank: fixtures.rank }))],
+  [
+    "GET",
+    "/rank",
+    ({ query, random }) => {
+      const year = query.get("xn");
+      const term = query.get("xq");
+      const range = query.get("range");
+      const dataSource = query.get("data_source");
+      const display = query.get("display");
+      const validYear =
+        year === null || (/^\d{4}$/.test(year) && Number(year) >= 2000 && Number(year) <= 2100);
+      const validTerm = term === null || ["autumn", "spring", "summer"].includes(term);
+      const validRange = ["major", "minor"].includes(range);
+      const validDataSource = ["total", "execution"].includes(dataSource);
+      const validDisplay = ["max", "initial"].includes(display);
+      return validYear && validTerm && validRange && validDataSource && validDisplay
+        ? json(ok(createRandomRank(random)))
+        : json({ code: "INVALID_REQUEST" }, 400);
+    },
+  ],
+  [
+    "GET",
+    "/rank/ca",
+    ({ random }) => json(ok({ updated_at: timestamp(), rank: createRandomRank(random) })),
+  ],
   ["PUT", "/rank/ca", () => success()],
   ["GET", "/course/extra", () => json(ok(fixtures.extraCourses))],
   [
     "GET",
     "/semester",
-    ({ query }) =>
-      json(
+    ({ query }) => {
+      const year = Number(query.get("xn")) || fixtures.semester.xn;
+      const term = query.get("xq") || fixtures.semester.xq;
+      return json(
         ok({
-          xn: Number(query.get("xn")) || 2026,
-          xq: query.get("xq") || "autumn",
-          start: "2026-09-13",
-          weeks: 16,
-          from_zero: false,
+          ...fixtures.semester,
+          xn: year,
+          xq: term,
+          start: semesterStartDate(year, term),
         }),
-      ),
+      );
+    },
   ],
   ["GET", "/jifen/goods", () => json(ok(fixtures.goods))],
   ["GET", "/jifen/goods/exchanged", () => json(ok(state.exchangedGoods))],
@@ -150,7 +270,21 @@ const simpleRoutes = [
   ["PUT", "/dorm", () => success()],
   ["GET", "/dorm/electricity", () => json(ok({ balance: "186.50度" }))],
   ["PUT", "/dorm/electricity", () => success()],
-  ["GET", "/grade", () => json(ok(fixtures.grades))],
+  [
+    "GET",
+    "/grade",
+    ({ query }) => {
+      const year = query.get("xn");
+      const term = query.get("xq");
+      const validYear = Boolean(
+        year && /^\d{4}$/.test(year) && Number(year) >= 2000 && Number(year) <= 2100,
+      );
+      const validTerm = ["autumn", "winter", "spring", "summer"].includes(term);
+      return validYear && validTerm
+        ? json(ok(fixtures.grades))
+        : json({ code: "INVALID_REQUEST" }, 400);
+    },
+  ],
   [
     "GET",
     "/netflow",
@@ -605,7 +739,7 @@ function setCors(response) {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Mock-Status, X-Mock-Delay",
+    "Content-Type, Authorization, X-Mock-Status, X-Mock-Delay, X-Mock-Date",
   );
   response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 }
@@ -652,7 +786,7 @@ export function createMockServer({
         route.keys.map((key, index) => [key, decodeURIComponent(match[index + 1])]),
       );
       const body = await readBody(request);
-      let result = route.handler({ request, params, query: url.searchParams, body });
+      let result = route.handler({ request, params, query: url.searchParams, body, random });
 
       const forcedStatus = Number(request.headers["x-mock-status"]);
       if (Number.isInteger(forcedStatus) && forcedStatus >= 400 && forcedStatus <= 599) {
@@ -678,7 +812,7 @@ export function createMockServer({
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const host = process.env.MOCK_HOST || "127.0.0.1";
-  const port = Number(process.env.MOCK_PORT || process.env.PORT || 3000);
+  const port = Number(process.env.MOCK_PORT || process.env.PORT || 3100);
   createMockServer().listen(port, host, () => {
     console.log(`Weihuda mock server: http://${host}:${port}`);
     console.log(`Loaded ${routes.length} routes from Apifox project 8872112`);

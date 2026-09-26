@@ -10,7 +10,7 @@ export default defineConfig({
     locale: "zh-CN",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    extraHTTPHeaders: { "X-Mock-Delay": "0" },
+    extraHTTPHeaders: { "X-Mock-Date": "2026-09-23", "X-Mock-Delay": "0" },
   },
   projects: [
     {

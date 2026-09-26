@@ -20,6 +20,7 @@ const SettingsPage = lazy(() => import("../pages/SettingsPage"));
 const AboutPage = lazy(() => import("../pages/AboutPage"));
 const CardPage = lazy(() => import("../pages/services/CardPage"));
 const GradesPage = lazy(() => import("../pages/services/GradesPage"));
+const RankPage = lazy(() => import("../pages/services/RankPage"));
 const PointsPage = lazy(() => import("../pages/services/PointsPage"));
 const DormPage = lazy(() => import("../pages/services/DormPage"));
 const NetworkPage = lazy(() => import("../pages/services/NetworkPage"));
@@ -122,6 +123,14 @@ export default function App() {
                     element={
                       <Protected>
                         <GradesPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/rank"
+                    element={
+                      <Protected>
+                        <RankPage />
                       </Protected>
                     }
                   />

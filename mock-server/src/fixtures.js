@@ -89,6 +89,22 @@ export const state = {
 };
 
 export const fixtures = {
+  semester: {
+    xn: 2026,
+    xq: "autumn",
+    start: "2026-09-13",
+    weeks: 16,
+    from_zero: false,
+  },
+  holidays: [
+    { name: "元旦", start: "2026-01-01", end: "2026-01-03" },
+    { name: "春节", start: "2026-02-15", end: "2026-02-23" },
+    { name: "清明节", start: "2026-04-04", end: "2026-04-06" },
+    { name: "劳动节", start: "2026-05-01", end: "2026-05-05" },
+    { name: "端午节", start: "2026-06-19", end: "2026-06-21" },
+    { name: "中秋节", start: "2026-09-25", end: "2026-09-27" },
+    { name: "国庆节", start: "2026-10-01", end: "2026-10-07" },
+  ],
   me: {
     class: "计算机2201班",
     name: "张同学",
@@ -405,6 +421,31 @@ export const fixtures = {
     vc: { color: "良好", rank: "前 26%", grade: "4200 毫升", score: 86 },
   },
 };
+
+const rankGroupKeys = ["all", "compulsory", "core"];
+
+export function createRandomRank(random = Math.random) {
+  return Object.fromEntries(
+    rankGroupKeys.map((key) => {
+      const source = fixtures.rank[key];
+      const mode = Math.min(3, Math.floor(random() * 4));
+
+      if (mode === 3) return [key, null];
+
+      return [
+        key,
+        {
+          arithmetic: mode === 2 ? null : source.arithmetic,
+          arithmetic_rank: mode === 1 ? null : source.arithmetic_rank,
+          weighted: mode === 2 ? null : source.weighted,
+          weighted_rank: mode === 1 ? null : source.weighted_rank,
+          gpa: mode === 2 ? null : source.gpa,
+          gpa_rank: mode === 1 ? null : source.gpa_rank,
+        },
+      ];
+    }),
+  );
+}
 
 export function nextId() {
   state.nextId += 1;
