@@ -1,24 +1,31 @@
 import { request, requestBlob, toQuery } from "./client";
+import {
+  normalizeAcademicCalendarDetailResponse,
+  normalizeAcademicCalendarListResponse,
+} from "../utils/academicCalendar";
 import type {
   About,
+  AcademicCalendarPeriodItem,
   AuthTokens,
+  Building,
   CaRank,
   CardInfo,
   CardRecords,
   CountdownInfo,
   Course,
   CustomCourseRequest,
-  CustomExamRequest,
+  CustomExamScheduleRequest,
   Dorm,
   EmptyRoom,
-  Exam,
+  EmptyRoomResult,
+  ExamScheduleItem,
+  ExamScheduleType,
   ExchangedGoods,
   ExtraCourse,
   FeedbackList,
   Goods,
   Grade,
   GradeDetail,
-  GradeTerm,
   GymAppointment,
   GymGrade,
   IndexCardSetting,
@@ -34,7 +41,8 @@ import type {
   Points,
   Rank,
   RankQuery,
-  Semester,
+  SemesterId,
+  SemesterTable,
   Settings,
   TableSetting,
 } from "./types";
@@ -48,6 +56,30 @@ function encodePassword(password: string) {
   return window.btoa(binary);
 }
 
+function validateSemesterTable(table: SemesterTable) {
+  const hasValidItems =
+    Array.isArray(table.items) &&
+    table.items.every(
+      (item) =>
+        Number.isInteger(item.xn) &&
+        Number.isInteger(item.xq) &&
+        typeof item.xq_text === "string" &&
+        item.xq_text.trim().length > 0 &&
+        typeof item.start === "string" &&
+        Number.isInteger(item.weeks) &&
+        item.weeks > 0 &&
+        typeof item.from_zero === "boolean",
+    );
+  const hasCurrentSemester =
+    Number.isInteger(table.now_xn) &&
+    Number.isInteger(table.now_xq) &&
+    table.items.some((item) => item.xn === table.now_xn && item.xq === table.now_xq);
+  if (!hasValidItems || !hasCurrentSemester) {
+    throw new Error("服务端返回的学期表无效。");
+  }
+  return table;
+}
+
 export const api = {
   system: {
     health: () => request<{ hello: string }>("/", { auth: false }),
@@ -55,6 +87,16 @@ export const api = {
   },
   countdown: {
     get: () => request<CountdownInfo>("/countdown", { auth: false }),
+  },
+  calendar: {
+    list: () =>
+      request<unknown>("/calendar", {
+        auth: false,
+      }).then(normalizeAcademicCalendarListResponse),
+    detail: (period: AcademicCalendarPeriodItem) =>
+      request<unknown>(`/calendar/${encodeURIComponent(String(period.id))}`, {
+        auth: false,
+      }).then((value) => normalizeAcademicCalendarDetailResponse(value, period)),
   },
   auth: {
     login: (input: LoginRequest) =>
@@ -95,21 +137,18 @@ export const api = {
     refreshCa: () => request<void>("/rank/ca", { method: "PUT" }),
   },
   course: {
-    table: (year: number, term: string) =>
+    table: (year: number, term: SemesterId) =>
       request<Course[]>(`/classtable${toQuery({ xn: year, xq: term })}`),
-    extra: (year: number, term: string) =>
+    extra: (year: number, term: SemesterId) =>
       request<ExtraCourse[]>(`/course/extra${toQuery({ xn: year, xq: term })}`),
-    create: (year: number, term: string, course: CustomCourseRequest) =>
+    create: (year: number, term: SemesterId, course: CustomCourseRequest) =>
       request<void>("/course/custom", { method: "POST", body: { xn: year, xq: term, course } }),
     update: (id: number, course: CustomCourseRequest) =>
       request<void>(`/course/custom/${id}`, { method: "PUT", body: course }),
     remove: (id: number) => request<void>(`/course/custom/${id}`, { method: "DELETE" }),
   },
   semester: {
-    get: (...args: [] | [year: number, term: string]) => {
-      const [year, term] = args;
-      return request<Semester>(`/semester${toQuery({ xn: year, xq: term })}`, { auth: false });
-    },
+    get: () => request<SemesterTable>("/semester", { auth: false }).then(validateSemesterTable),
   },
   points: {
     summary: () => request<Points>("/jifen"),
@@ -131,7 +170,7 @@ export const api = {
     refreshElectricity: () => request<void>("/dorm/electricity", { method: "PUT" }),
   },
   grade: {
-    list: (year: number, term: GradeTerm) =>
+    list: (year: number, term: SemesterId) =>
       request<Grade[]>(`/grade${toQuery({ xn: year, xq: term })}`),
     detail: (id: string) => request<GradeDetail[]>(`/grade/${encodeURIComponent(id)}`),
   },
@@ -145,9 +184,13 @@ export const api = {
     list: () => request<import("./types").Announcement[]>("/announcement"),
   },
   exam: {
-    list: () => request<Exam[]>("/exam"),
-    create: (input: CustomExamRequest) => request<void>("/exam", { method: "POST", body: input }),
-    update: (id: number, input: CustomExamRequest) =>
+    list: (type: ExamScheduleType = "recent", offset?: number) =>
+      request<ExamScheduleItem[]>(
+        `/exam${toQuery({ type, offset: type === "end" ? offset : undefined })}`,
+      ),
+    create: (input: CustomExamScheduleRequest) =>
+      request<void>("/exam", { method: "POST", body: input }),
+    update: (id: number, input: CustomExamScheduleRequest) =>
       request<void>(`/exam/${id}`, { method: "PUT", body: input }),
     remove: (id: number) => request<void>(`/exam/${id}`, { method: "DELETE" }),
   },
@@ -174,8 +217,8 @@ export const api = {
     bind: (password: string) =>
       request<void>("/lab/bind", { method: "POST", body: new URLSearchParams({ password }) }),
     schedule: () => request<LabSchedule[]>("/lab/schedule"),
-    grade: (year: number, term: string) =>
-      request<LabGrade>(`/lab/grade${toQuery({ xn: year, xq: term })}`),
+    grade: (year: number, term: SemesterId) =>
+      request<LabGrade | null>(`/lab/grade${toQuery({ xn: year, xq: term })}`),
   },
   notice: {
     list: (status = "all", page = 1, size = 20) =>
@@ -183,7 +226,23 @@ export const api = {
     read: (id: number) => request<void>(`/notice/${id}`, { method: "PUT" }),
   },
   room: {
-    empty: (buildingId: string, time: string, date: string) =>
-      request<EmptyRoom[]>(`/empty_room${toQuery({ building_id: buildingId, time, date })}`),
+    buildings: () => request<Building[]>("/building"),
+    updateFavorite: (buildingId: string, favorite: boolean) =>
+      request<Building>(`/building/${encodeURIComponent(buildingId)}/favorite`, {
+        method: "PUT",
+        body: { favorite },
+      }),
+    empty: async (buildingId: string, date: string, times: readonly number[]) => {
+      type EmptyRoomResultPayload = Omit<EmptyRoomResult, "items"> & {
+        items: EmptyRoom | EmptyRoom[];
+      };
+      const result = await request<EmptyRoomResultPayload>(
+        `/empty_room${toQuery({ building_id: buildingId, date, times: times.join(",") })}`,
+      );
+      return {
+        ...result,
+        items: Array.isArray(result.items) ? result.items : [result.items],
+      };
+    },
   },
 };

@@ -1,6 +1,8 @@
-import type { Semester } from "../api/types";
+import type { SemesterItem } from "../api/types";
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const CHINESE_DATE_PATTERN = /^(\d{4})年(\d{1,2})月(\d{1,2})(?:日|号)/;
+const DAY_MS = 86_400_000;
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   month: "long",
@@ -11,6 +13,12 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   month: "short",
   day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const timeFormatter = new Intl.DateTimeFormat("zh-CN", {
   hour: "2-digit",
   minute: "2-digit",
   hour12: false,
@@ -42,6 +50,19 @@ const currencyFormatter = new Intl.NumberFormat("zh-CN", {
 export const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
 export function parseApiDate(value: string) {
+  const chineseDate = value.match(CHINESE_DATE_PATTERN);
+  if (chineseDate) {
+    const [, year, month, day] = chineseDate;
+    const numericYear = Number(year);
+    const numericMonth = Number(month);
+    const numericDay = Number(day);
+    const date = new Date(numericYear, numericMonth - 1, numericDay);
+    return date.getFullYear() === numericYear &&
+      date.getMonth() + 1 === numericMonth &&
+      date.getDate() === numericDay
+      ? date
+      : null;
+  }
   const normalized = DATE_ONLY_PATTERN.test(value)
     ? `${value}T00:00:00`
     : value.includes("T")
@@ -51,9 +72,29 @@ export function parseApiDate(value: string) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+export function daysUntilDate(value: string, from = new Date()) {
+  const target = parseApiDate(value);
+  if (!target) return null;
+  const fromDay = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+  const targetDay = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate());
+  return Math.round((targetDay - fromDay) / DAY_MS);
+}
+
 export function formatDate(value: string | Date) {
   const date = typeof value === "string" ? parseApiDate(value) : value;
   return date ? dateFormatter.format(date) : "时间待定";
+}
+
+export function formatDateWithWeekday(value: string) {
+  const date = parseApiDate(value);
+  return date ? `${value} 星期${weekdayCharacters[date.getDay()]}` : value;
+}
+
+export function formatMonthDayWithWeekday(value: string | Date) {
+  const date = typeof value === "string" ? parseApiDate(value) : value;
+  return date
+    ? `${date.getMonth() + 1}月${date.getDate()}日(星期${weekdayCharacters[date.getDay()]})`
+    : "日期待定";
 }
 
 export function formatDateHeading(date = new Date()) {
@@ -75,6 +116,11 @@ export function formatDateTime(value: string) {
   return date ? dateTimeFormatter.format(date) : value;
 }
 
+export function formatTime(value: string) {
+  const date = parseApiDate(value);
+  return date ? timeFormatter.format(date) : null;
+}
+
 export function formatDateTimeWithYear(value: string) {
   const date = parseApiDate(value);
   return date ? fullDateTimeFormatter.format(date) : value;
@@ -88,7 +134,7 @@ export function formatCurrency(value: number) {
   return currencyFormatter.format(value);
 }
 
-export function getCurrentWeek(semester: Semester, date = new Date()) {
+export function getCurrentWeek(semester: SemesterItem, date = new Date()) {
   const start = parseApiDate(semester.start);
   if (!start) return semester.from_zero ? 0 : 1;
   start.setHours(0, 0, 0, 0);
@@ -101,7 +147,7 @@ export function getCurrentWeek(semester: Semester, date = new Date()) {
   return Math.max(base, Math.min(elapsedWeeks + base, semester.weeks));
 }
 
-export function isDateInSemester(semester: Semester, date = new Date()) {
+export function isDateInSemester(semester: SemesterItem, date = new Date()) {
   const start = parseApiDate(semester.start);
   if (!start) return false;
   start.setHours(0, 0, 0, 0);
@@ -112,7 +158,7 @@ export function isDateInSemester(semester: Semester, date = new Date()) {
   return current >= start && current < end;
 }
 
-export function dateForSemesterDay(semester: Semester, week: number, day: number) {
+export function dateForSemesterDay(semester: SemesterItem, week: number, day: number) {
   const start = parseApiDate(semester.start);
   if (!start) return null;
   start.setHours(0, 0, 0, 0);
@@ -124,16 +170,6 @@ export function dateForSemesterDay(semester: Semester, week: number, day: number
 
 export function currentWeekday(date = new Date()) {
   return date.getDay();
-}
-
-export function termName(term: string) {
-  const names: Record<string, string> = {
-    spring: "春季学期",
-    summer: "夏季学期",
-    autumn: "秋季学期",
-    winter: "冬季学期",
-  };
-  return names[term] || term;
 }
 
 export function periodName(period: number) {

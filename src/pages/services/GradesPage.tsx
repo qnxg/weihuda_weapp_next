@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { api } from "../../api/api";
 import type { Grade } from "../../api/types";
+import { PageFootnotes } from "../../components/PageFootnotes";
 import {
-  gradeTerms,
   SemesterPickerDialog,
   semesterHeadingLabel,
   semesterOptionLabel,
@@ -19,26 +19,46 @@ import {
   PageSkeleton,
   QueryState,
   Section,
+  Tag,
 } from "../../components/ui";
-import { isGradeTerm, parseAcademicYear } from "../../utils/semester";
+import { buildGradeTags, formatGradePoint, sortGradeDetails } from "../../utils/grade";
+import {
+  findCurrentSemester,
+  findSemester,
+  parseAcademicYear,
+  parseSemesterId,
+} from "../../utils/semester";
+
+const gradePageFootnotes = [
+  "数据来源于教务系统。",
+  "点击可查看课程成绩的具体组成。",
+  "课程分数下方的小数为该门课程的绩点。",
+];
 
 function GradeSummary({ grade }: { grade: Grade }) {
-  const hasDetail = Boolean(grade.jx0404id);
+  const tags = buildGradeTags(grade);
+  const gradePoint = formatGradePoint(grade.gpa);
+
   return (
     <>
       <div className="min-w-0">
         <h3 className="text-clamp-2">{grade.course_name}</h3>
         <p className="muted text-sm">
-          {grade.course_id} · {grade.credit} 学分 · {grade.grade_type}
+          {grade.course_id} · {grade.credit} 学分
         </p>
-        <p className="muted text-sm">
-          {grade.course_type1 || "未分类"} / {grade.course_type2}
-          {grade.grade_tag ? ` · ${grade.grade_tag}` : ""}
-        </p>
+        <ul className="grade-tags" aria-label="课程属性">
+          {tags.map((tag) => (
+            <Tag as="li" className="grade-tag" tone={tag.tone} key={tag.label}>
+              {tag.label}
+            </Tag>
+          ))}
+        </ul>
       </div>
       <div className="grade-score">
         <strong>{grade.score}</strong>
-        <span>{hasDetail ? `GPA ${grade.gpa ?? "—"}` : "暂无明细"}</span>
+        <span aria-label={grade.gpa === null ? "绩点暂无" : `绩点 ${gradePoint}`}>
+          {gradePoint}
+        </span>
       </div>
     </>
   );
@@ -49,16 +69,20 @@ function CourseGradesPage() {
   const [selected, setSelected] = useState<Grade | null>(null);
   const [semesterPickerOpen, setSemesterPickerOpen] = useState(false);
   const requestedYear = parseAcademicYear(searchParams.get("xn"));
-  const requestedTermValue = searchParams.get("xq");
-  const requestedTerm = isGradeTerm(requestedTermValue) ? requestedTermValue : undefined;
-  const currentSemester = useQuery({
-    queryKey: ["semester", "current"],
+  const requestedTerm = parseSemesterId(searchParams.get("xq"));
+  const semesterTable = useQuery({
+    queryKey: ["semester"],
     queryFn: () => api.semester.get(),
   });
-  const currentTerm = isGradeTerm(currentSemester.data?.xq) ? currentSemester.data.xq : undefined;
-  const year = requestedYear ?? currentSemester.data?.xn;
-  const term = requestedTerm ?? currentTerm;
-  const hasSemester = year !== undefined && term !== undefined;
+  const currentSemester = findCurrentSemester(semesterTable.data);
+  const requestedSemester = findSemester(semesterTable.data, requestedYear, requestedTerm);
+  const semester = requestedSemester ?? currentSemester;
+  const year = semester?.xn;
+  const term = semester?.xq;
+  const semesterOption: SemesterOption | undefined = semester
+    ? { year: semester.xn, term: semester.xq, text: semester.xq_text }
+    : undefined;
+  const hasSemester = semesterOption !== undefined;
   const grades = useQuery({
     queryKey: ["grades", year, term],
     queryFn: () => api.grade.list(year!, term!),
@@ -68,17 +92,18 @@ function CourseGradesPage() {
     queryKey: ["grade", "detail", selected?.jx0404id],
     queryFn: () => api.grade.detail(selected!.jx0404id!),
     enabled: Boolean(selected?.jx0404id),
+    select: sortGradeDetails,
   });
 
   function chooseSemester(option: SemesterOption) {
     setSemesterPickerOpen(false);
     const next = new URLSearchParams(searchParams);
-    if (currentSemester.data?.xn === option.year && currentSemester.data.xq === option.term) {
+    if (currentSemester?.xn === option.year && currentSemester.xq === option.term) {
       next.delete("xn");
       next.delete("xq");
     } else {
       next.set("xn", String(option.year));
-      next.set("xq", option.term);
+      next.set("xq", String(option.term));
     }
     setSelected(null);
     setSearchParams(next, { replace: true });
@@ -89,14 +114,14 @@ function CourseGradesPage() {
       <PageHeader title="课程成绩" back />
 
       <Section
-        title={hasSemester ? semesterHeadingLabel({ year, term }) : "学年学期"}
+        title={semesterOption ? semesterHeadingLabel(semesterOption) : "学年学期"}
         description={grades.data ? `${grades.data.length} 门课程` : undefined}
         action={
           <button
             className="button button--text button--small"
             type="button"
             aria-label={
-              hasSemester ? `切换学期，当前为${semesterOptionLabel({ year, term })}` : "切换学期"
+              semesterOption ? `切换学期，当前为${semesterOptionLabel(semesterOption)}` : "切换学期"
             }
             aria-haspopup="dialog"
             aria-expanded={semesterPickerOpen}
@@ -108,9 +133,9 @@ function CourseGradesPage() {
           </button>
         }
       >
-        {currentSemester.isPending && !hasSemester ? <PageSkeleton rows={1} /> : null}
-        {currentSemester.isError && !hasSemester ? (
-          <PageError error={currentSemester.error} onRetry={() => void currentSemester.refetch()} />
+        {semesterTable.isPending && !hasSemester ? <PageSkeleton rows={1} /> : null}
+        {semesterTable.isError && !hasSemester ? (
+          <PageError error={semesterTable.error} onRetry={() => void semesterTable.refetch()} />
         ) : null}
         {hasSemester ? (
           <QueryState query={grades} loadingRows={5}>
@@ -119,14 +144,15 @@ function CourseGradesPage() {
                 <div className="surface list grade-list">
                   {items.map((grade) =>
                     grade.jx0404id ? (
-                      <button
-                        className="data-row grade-row"
-                        type="button"
-                        key={grade.course_id}
-                        onClick={() => setSelected(grade)}
-                      >
+                      <div className="data-row grade-row" key={grade.course_id}>
+                        <button
+                          className="grade-row__action"
+                          type="button"
+                          aria-label={`查看${grade.course_name}成绩组成`}
+                          onClick={() => setSelected(grade)}
+                        />
                         <GradeSummary grade={grade} />
-                      </button>
+                      </div>
                     ) : (
                       <div className="data-row grade-row grade-row--static" key={grade.course_id}>
                         <GradeSummary grade={grade} />
@@ -142,43 +168,36 @@ function CourseGradesPage() {
         ) : null}
       </Section>
 
-      {hasSemester && semesterPickerOpen ? (
+      <PageFootnotes items={gradePageFootnotes} />
+
+      {semesterOption && semesterPickerOpen ? (
         <SemesterPickerDialog
-          selected={{ year, term }}
-          selectedSemester={
-            currentSemester.data?.xn === year && currentSemester.data.xq === term
-              ? currentSemester.data
-              : undefined
-          }
-          current={currentSemester.data}
-          terms={gradeTerms}
+          selected={semesterOption}
+          semesters={semesterTable.data!.items}
+          current={currentSemester}
           onSelect={chooseSemester}
           onClose={() => setSemesterPickerOpen(false)}
         />
       ) : null}
 
       {selected ? (
-        <Modal
-          title={selected.course_name}
-          description={`课程号 ${selected.course_id}`}
-          onClose={() => setSelected(null)}
-        >
+        <Modal title={selected.course_name} onClose={() => setSelected(null)}>
           {detail.isPending ? <PageSkeleton rows={3} /> : null}
           {detail.isError ? (
             <PageError error={detail.error} onRetry={() => void detail.refetch()} />
           ) : null}
           {detail.data?.length ? (
-            <div className="surface list">
+            <ul className="list grade-detail-list">
               {detail.data.map((item) => (
-                <div className="data-row" key={item.name}>
-                  <div>
+                <li className="data-row" key={item.name}>
+                  <div className="grade-detail-list__label">
                     <strong>{item.name}</strong>
                     <p className="muted text-sm">占比 {item.percentage}</p>
                   </div>
                   <span className="metric__value">{item.score}</span>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : null}
           {detail.data && detail.data.length === 0 ? (
             <EmptyState title="暂无明细" description="这门课程还没有可展示的成绩构成。" />

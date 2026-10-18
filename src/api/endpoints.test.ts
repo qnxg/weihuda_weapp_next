@@ -6,10 +6,10 @@ import { endpointCatalog } from "./endpoints";
 import { publicRouteKeys, routes } from "../../mock-server/src/server.js";
 
 describe("endpoint catalog", () => {
-  it("contains all 58 unique Apifox operations", () => {
+  it("contains all 62 unique local endpoint operations", () => {
     const keys = endpointCatalog.map(({ method, path }) => `${method} ${path}`);
-    expect(keys).toHaveLength(58);
-    expect(new Set(keys).size).toBe(58);
+    expect(keys).toHaveLength(62);
+    expect(new Set(keys).size).toBe(62);
   });
 
   it("matches every mock server route", () => {

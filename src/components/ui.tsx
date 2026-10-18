@@ -11,28 +11,115 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
+export type TagTone = "neutral" | "primary" | "success" | "warning" | "danger";
+
+const tagToneClasses: Record<TagTone, string> = {
+  neutral: "",
+  primary: "badge--brand",
+  success: "badge--success",
+  warning: "badge--warning",
+  danger: "badge--danger",
+};
+
+export function Tag({
+  as = "span",
+  tone = "neutral",
+  className = "",
+  children,
+}: {
+  as?: "span" | "li";
+  tone?: TagTone;
+  className?: string;
+  children: ReactNode;
+}) {
+  const classes = ["badge", tagToneClasses[tone], className].filter(Boolean).join(" ");
+  return as === "li" ? (
+    <li className={classes}>{children}</li>
+  ) : (
+    <span className={classes}>{children}</span>
+  );
+}
+
+export function RadioGroup<Value extends string>({
+  label,
+  name,
+  value,
+  options,
+  className = "",
+  onChange,
+}: {
+  label: string;
+  name?: string;
+  value: Value;
+  options: ReadonlyArray<{ value: Value; label: string }>;
+  className?: string;
+  onChange: (value: Value) => void;
+}) {
+  const generatedName = useId();
+  const inputName = name ?? generatedName;
+
+  return (
+    <div className={`radio-group-row ${className}`.trim()} role="radiogroup" aria-label={label}>
+      <span className="radio-group-row__label">{label}</span>
+      <div className="radio-group-row__options">
+        {options.map((option) => (
+          <label className="radio-group-option" key={option.value}>
+            <input
+              checked={value === option.value}
+              name={inputName}
+              type="radio"
+              value={option.value}
+              onChange={() => onChange(option.value)}
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function PageHeader({
   title,
   description,
   back = false,
   leadingAction,
-  action,
 }: {
   title: string;
   description?: ReactNode;
   back?: boolean;
   leadingAction?: ReactNode;
-  action?: ReactNode;
 }) {
   const navigate = useNavigate();
+  const headerRef = useRef<HTMLElement>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const scrollContainer = headerRef.current?.closest<HTMLElement>("#main-content");
+    if (!scrollContainer) return;
+
+    let wasScrolled = false;
+    const updateScrolledState = () => {
+      const nextScrolled = scrollContainer.scrollTop > 0;
+      if (nextScrolled === wasScrolled) return;
+      wasScrolled = nextScrolled;
+      setIsScrolled(nextScrolled);
+    };
+
+    updateScrolledState();
+    scrollContainer.addEventListener("scroll", updateScrolledState, { passive: true });
+    return () => scrollContainer.removeEventListener("scroll", updateScrolledState);
+  }, []);
+
   return (
-    <header className="page-header">
+    <header ref={headerRef} className={`page-header${isScrolled ? " is-scrolled" : ""}`}>
       <div className="cluster gap-12 min-w-0">
         {leadingAction}
         {back ? (
@@ -50,7 +137,6 @@ export function PageHeader({
           {description ? <p className="muted text-sm text-clamp-2">{description}</p> : null}
         </div>
       </div>
-      {action}
     </header>
   );
 }
@@ -63,7 +149,7 @@ export function Section({
   className = "",
 }: {
   title?: string;
-  description?: string;
+  description?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -74,7 +160,7 @@ export function Section({
         <div className="section-heading cluster spread gap-12">
           <div className="min-w-0">
             {title ? <h2>{title}</h2> : null}
-            {description ? <p className="muted text-sm text-pretty">{description}</p> : null}
+            {description ? <div className="muted text-sm text-pretty">{description}</div> : null}
           </div>
           {action}
         </div>
@@ -234,6 +320,7 @@ export function StatusMessage({
 export function Modal({
   title,
   description,
+  bodyLabel,
   children,
   onClose,
   variant = "default",
@@ -241,9 +328,10 @@ export function Modal({
 }: {
   title: string;
   description?: string;
+  bodyLabel?: string;
   children: ReactNode;
   onClose: () => void;
-  variant?: "default" | "confirmation";
+  variant?: "default" | "confirmation" | "course-detail";
   showClose?: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -271,6 +359,15 @@ export function Modal({
   }
 
   function closeFromBackdrop(event: ReactMouseEvent<HTMLDialogElement>) {
+    if (variant === "course-detail") {
+      const target = event.target;
+      const isTransparentSpace =
+        target === event.currentTarget ||
+        (target instanceof HTMLElement && target.classList.contains("modal__body"));
+      if (isTransparentSpace) onClose();
+      return;
+    }
+
     if (event.target !== event.currentTarget) return;
     const bounds = event.currentTarget.getBoundingClientRect();
     const insideDialog =
@@ -328,7 +425,14 @@ export function Modal({
           </button>
         ) : null}
       </div>
-      <div className="modal__body">{children}</div>
+      <div
+        className="modal__body"
+        role={bodyLabel ? "region" : undefined}
+        aria-label={bodyLabel}
+        tabIndex={bodyLabel ? 0 : undefined}
+      >
+        {children}
+      </div>
     </dialog>
   );
 }

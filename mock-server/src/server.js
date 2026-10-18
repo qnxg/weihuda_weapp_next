@@ -14,6 +14,8 @@ const success = () => json(ok());
 export const publicRouteKeys = new Set([
   "GET /",
   "GET /about",
+  "GET /calendar",
+  "GET /calendar/{id}",
   "GET /countdown",
   "GET /semester",
   "POST /auth/login",
@@ -31,6 +33,15 @@ const shanghaiDateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "2-digit",
   day: "2-digit",
 });
+const shanghaiDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 
 function shanghaiDateKey(date = new Date()) {
   const parts = Object.fromEntries(
@@ -40,6 +51,22 @@ function shanghaiDateKey(date = new Date()) {
       .map(({ type, value }) => [type, value]),
   );
   return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function shanghaiDateTimeKey(date = new Date()) {
+  const parts = Object.fromEntries(
+    shanghaiDateTimeFormatter
+      .formatToParts(date)
+      .filter(({ type }) => type !== "literal")
+      .map(({ type, value }) => [type, value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
+function examHasEnded(exam, currentDateTime = shanghaiDateTimeKey()) {
+  if (exam.invalid) return true;
+  if (!exam.date || !exam.end_time) return false;
+  return `${exam.date} ${exam.end_time}` <= currentDateTime;
 }
 
 function calendarDayValue(value) {
@@ -70,16 +97,53 @@ function addCalendarDays(value, days) {
   ].join("-");
 }
 
-function semesterStartDate(year, term) {
-  if (term === "spring") return `${year + 1}-02-22`;
-  if (term === "summer") return `${year + 1}-06-28`;
-  if (term === "winter") return `${year + 1}-01-04`;
-  return `${year}-09-13`;
+function chineseCalendarDate(value) {
+  const date = new Date(calendarDayValue(value));
+  const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+  return `${date.getUTCFullYear()}年${date.getUTCMonth() + 1}月${date.getUTCDate()}日（周${weekdays[date.getUTCDay()]}）`;
+}
+
+function isCalendarDate(value) {
+  try {
+    calendarDayValue(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function findSemester(year, semesterId) {
+  if (!/^\d{4}$/.test(year || "") || !/^-?\d+$/.test(semesterId || "")) return undefined;
+  return fixtures.semesterTable.items.find(
+    (semester) => semester.xn === Number(year) && semester.xq === Number(semesterId),
+  );
+}
+
+function currentSemester() {
+  const { now_xn: year, now_xq: semesterId } = fixtures.semesterTable;
+  return fixtures.semesterTable.items.find(
+    (semester) => semester.xn === year && semester.xq === semesterId,
+  );
+}
+
+function buildingView(building) {
+  const preference = state.buildingPreferences[building.building_id];
+  return {
+    ...building,
+    favorite: preference?.favorite ?? false,
+    last_query_at: preference?.last_query_at ?? null,
+  };
+}
+
+function buildingCatalog() {
+  return fixtures.buildings
+    .map(buildingView)
+    .toSorted((left, right) => Number(right.favorite) - Number(left.favorite));
 }
 
 export function buildCountdown(
   currentDate,
-  semester = fixtures.semester,
+  semester = currentSemester(),
   holidays = fixtures.holidays,
 ) {
   const holiday = holidays.find((item) => calendarDaysBetween(currentDate, item.end) >= 0);
@@ -103,6 +167,7 @@ export function buildCountdown(
   const semesterCountdown = {
     xn: semester.xn,
     xq: semester.xq,
+    xq_text: semester.xq_text,
     target_date: semesterStatus === "upcoming" ? semester.start : semesterEnd,
     weeks: semester.weeks,
     status: semesterStatus,
@@ -150,6 +215,35 @@ const simpleRoutes = [
     "GET",
     "/countdown",
     ({ request }) => json(ok(buildCountdown(request.headers["x-mock-date"] || shanghaiDateKey()))),
+  ],
+  [
+    "GET",
+    "/calendar",
+    () =>
+      json(
+        ok({
+          items: fixtures.academicCalendars.map(({ xn, periods }) => ({
+            xn,
+            periods: periods.map(({ id, name }) => ({ id, name })),
+          })),
+          now_id: fixtures.academicCalendars[0].periods[0].id,
+        }),
+      ),
+  ],
+  [
+    "GET",
+    "/calendar/{id}",
+    ({ params }) => {
+      if (!/^[1-9]\d*$/.test(params.id)) {
+        return json({ code: "INVALID_REQUEST" }, 400);
+      }
+      for (const { periods } of fixtures.academicCalendars) {
+        const matchedPeriod = periods.find(({ id }) => id === Number(params.id));
+        if (!matchedPeriod) continue;
+        return json(ok(matchedPeriod.detail));
+      }
+      return json({ code: "CALENDAR_NOT_FOUND" }, 404);
+    },
   ],
   ["GET", "/auth/tfa", () => success()],
   ["POST", "/auth/tfa", () => success()],
@@ -209,13 +303,16 @@ const simpleRoutes = [
       const range = query.get("range");
       const dataSource = query.get("data_source");
       const display = query.get("display");
-      const validYear =
-        year === null || (/^\d{4}$/.test(year) && Number(year) >= 2000 && Number(year) <= 2100);
-      const validTerm = term === null || ["autumn", "spring", "summer"].includes(term);
+      const validSemester =
+        year === null
+          ? true
+          : term === null
+            ? fixtures.semesterTable.items.some((semester) => semester.xn === Number(year))
+            : findSemester(year, term) !== undefined;
       const validRange = ["major", "minor"].includes(range);
       const validDataSource = ["total", "execution"].includes(dataSource);
       const validDisplay = ["max", "initial"].includes(display);
-      return validYear && validTerm && validRange && validDataSource && validDisplay
+      return validSemester && validRange && validDataSource && validDisplay
         ? json(ok(createRandomRank(random)))
         : json({ code: "INVALID_REQUEST" }, 400);
     },
@@ -226,23 +323,15 @@ const simpleRoutes = [
     ({ random }) => json(ok({ updated_at: timestamp(), rank: createRandomRank(random) })),
   ],
   ["PUT", "/rank/ca", () => success()],
-  ["GET", "/course/extra", () => json(ok(fixtures.extraCourses))],
   [
     "GET",
-    "/semester",
-    ({ query }) => {
-      const year = Number(query.get("xn")) || fixtures.semester.xn;
-      const term = query.get("xq") || fixtures.semester.xq;
-      return json(
-        ok({
-          ...fixtures.semester,
-          xn: year,
-          xq: term,
-          start: semesterStartDate(year, term),
-        }),
-      );
-    },
+    "/course/extra",
+    ({ query, random }) =>
+      findSemester(query.get("xn"), query.get("xq"))
+        ? json(ok(random() < 0.5 ? fixtures.extraCourses : []))
+        : json({ code: "INVALID_REQUEST" }, 400),
   ],
+  ["GET", "/semester", () => json(ok(fixtures.semesterTable))],
   ["GET", "/jifen/goods", () => json(ok(fixtures.goods))],
   ["GET", "/jifen/goods/exchanged", () => json(ok(state.exchangedGoods))],
   [
@@ -276,11 +365,7 @@ const simpleRoutes = [
     ({ query }) => {
       const year = query.get("xn");
       const term = query.get("xq");
-      const validYear = Boolean(
-        year && /^\d{4}$/.test(year) && Number(year) >= 2000 && Number(year) <= 2100,
-      );
-      const validTerm = ["autumn", "winter", "spring", "summer"].includes(term);
-      return validYear && validTerm
+      return findSemester(year, term)
         ? json(ok(fixtures.grades))
         : json({ code: "INVALID_REQUEST" }, 400);
     },
@@ -324,13 +409,64 @@ const simpleRoutes = [
   [
     "GET",
     "/netflow/detail",
-    () =>
-      json(
-        ok({
-          total: "12.80GB",
-          upload: "2.10GB",
-          download: "10.70GB",
-          items: [
+    ({ query }) => {
+      const year = Number(query.get("year"));
+      const month = Number(query.get("month"));
+      const dayValue = query.get("day");
+      const day = dayValue === null ? undefined : Number(dayValue);
+      const daysInMonth =
+        Number.isInteger(year) && Number.isInteger(month) ? new Date(year, month, 0).getDate() : 0;
+      if (
+        !Number.isInteger(year) ||
+        year <= 0 ||
+        !Number.isInteger(month) ||
+        month < 1 ||
+        month > 12 ||
+        (day !== undefined && (!Number.isInteger(day) || day < 1 || day > daysInMonth))
+      ) {
+        return json({ code: "INVALID_REQUEST" }, 400);
+      }
+
+      const isDaily = day !== undefined;
+      const items = isDaily
+        ? [
+            {
+              app: "/基础协议/SSL",
+              total: "400MB",
+              download: "360MB",
+              upload: "40MB",
+              percentage: 0.63,
+            },
+            {
+              app: "/视频服务/在线视频",
+              total: "100MB",
+              download: "90MB",
+              upload: "10MB",
+              percentage: 0.16,
+            },
+            {
+              app: "/云服务/文件同步",
+              total: "70MB",
+              download: "50MB",
+              upload: "20MB",
+              percentage: 0.11,
+            },
+            {
+              app: "/学习平台/在线课堂",
+              total: "45MB",
+              download: "15MB",
+              upload: "30MB",
+              percentage: 0.07,
+            },
+            {
+              app: "/其他流量",
+              total: "25MB",
+              download: "5MB",
+              upload: "20MB",
+              percentage: 0.03,
+            },
+          ]
+        : [
             {
               app: "/基础协议/SSL",
               total: "8.00GB",
@@ -338,28 +474,79 @@ const simpleRoutes = [
               upload: "0.50GB",
               percentage: 0.63,
             },
-          ],
+            {
+              app: "/视频服务/在线视频",
+              total: "2.10GB",
+              download: "2.00GB",
+              upload: "0.10GB",
+              percentage: 0.16,
+            },
+            {
+              app: "/云服务/文件同步",
+              total: "1.35GB",
+              download: "0.80GB",
+              upload: "0.55GB",
+              percentage: 0.11,
+            },
+            {
+              app: "/学习平台/在线课堂",
+              total: "0.85GB",
+              download: "0.30GB",
+              upload: "0.55GB",
+              percentage: 0.07,
+            },
+            {
+              app: "/其他流量",
+              total: "0.50GB",
+              download: "0.10GB",
+              upload: "0.40GB",
+              percentage: 0.03,
+            },
+          ];
+      return json(
+        ok({
+          total: isDaily ? "640MB" : "12.80GB",
+          upload: isDaily ? "120MB" : "2.10GB",
+          download: isDaily ? "520MB" : "10.70GB",
+          items,
         }),
-      ),
+      );
+    },
   ],
   ["GET", "/announcement", () => json(ok(fixtures.announcements))],
-  ["GET", "/gym/grade", () => json(ok(fixtures.gymGrade))],
+  [
+    "GET",
+    "/gym/grade",
+    ({ query }) => {
+      const year = query.get("xn");
+      const yearNumber = Number(year);
+      const isVisibleYear =
+        /^\d{4}$/.test(year || "") &&
+        fixtures.semesterTable.items.some((semester) => semester.xn === yearNumber);
+      return isVisibleYear
+        ? json(ok({ ...fixtures.gymGrade, ...fixtures.gymGradeByYear[yearNumber] }))
+        : json({ code: "INVALID_REQUEST" }, 400);
+    },
+  ],
   [
     "GET",
     "/gym/appointment",
-    () =>
-      json(
+    ({ request }) => {
+      const referenceDate = request.headers["x-mock-date"] || shanghaiDateKey();
+      const appointmentDate = addCalendarDays(referenceDate, 5);
+      return json(
         ok([
           {
             name: "体质健康测试",
             description: "携带校园卡参加测试",
-            show_date: "2026年10月15号（周四）",
+            show_date: chineseCalendarDate(appointmentDate),
             time: "10:00 - 11:30",
             test_type: "两项以上",
             status: "已预约",
           },
         ]),
-      ),
+      );
+    },
   ],
   [
     "POST",
@@ -373,8 +560,10 @@ const simpleRoutes = [
   [
     "GET",
     "/lab/schedule",
-    () =>
-      json(
+    ({ request }) => {
+      const referenceDate = request.headers["x-mock-date"] || shanghaiDateKey();
+      const scheduleDate = addCalendarDays(referenceDate, 3);
+      return json(
         ok([
           {
             seat: "12",
@@ -383,19 +572,23 @@ const simpleRoutes = [
             teacher: "周老师",
             week: 6,
             day: 3,
-            date_time: "2026-10-21 14:30",
+            date_time: `${scheduleDate} 14:30`,
             place: "物理实验楼205",
             phone: null,
             email: "teacher@example.edu.cn",
           },
         ]),
-      ),
+      );
+    },
   ],
   [
     "GET",
     "/lab/grade",
-    () =>
-      json(
+    ({ query }) => {
+      const semester = findSemester(query.get("xn"), query.get("xq"));
+      if (!semester) return json({ code: "INVALID_REQUEST" }, 400);
+      if (semester.xq === 4) return json(ok(null));
+      return json(
         ok({
           course_name: "大学物理实验",
           course_score: "92",
@@ -411,22 +604,93 @@ const simpleRoutes = [
             },
           ],
         }),
-      ),
+      );
+    },
   ],
+  ["GET", "/building", () => json(ok(buildingCatalog()))],
   [
     "GET",
     "/empty_room",
-    () =>
-      json(
-        ok([
-          { room_name: "综101", room_type: "多媒体教室", seat_count: 48, exam_seat_count: 30 },
-          { room_name: "综203", room_type: "计算机房", seat_count: 40, exam_seat_count: 40 },
-        ]),
-      ),
+    ({ query }) => {
+      const building = fixtures.buildings.find(
+        (item) => item.building_id === query.get("building_id"),
+      );
+      const date = query.get("date") || "";
+      const rawTimes = query.get("times") || "";
+      const times = rawTimes.split(",").map(Number);
+      const hasValidTimes =
+        rawTimes.length > 0 &&
+        times.every((time) => Number.isInteger(time) && time >= 1 && time <= 12);
+      if (!building || !isCalendarDate(date) || !hasValidTimes) {
+        return json(
+          {
+            code: "INVALID_REQUEST",
+            data: "building_id、date 和 times 必须是有效的楼栋、日期和小节次。",
+          },
+          400,
+        );
+      }
+      state.buildingPreferences[building.building_id] = {
+        favorite: state.buildingPreferences[building.building_id]?.favorite ?? false,
+        last_query_at: new Date().toISOString(),
+      };
+      const room = (suffix, roomType, seatCount, examSeatCount, unavailableTimes) => ({
+        room_name: `${building.building_name} ${suffix}`,
+        room_type: roomType,
+        seat_count: seatCount,
+        exam_seat_count: examSeatCount,
+        unavailableTimes,
+      });
+      const rooms = [
+        room("101", "多媒体教室", 48, 30, [12]),
+        room("103", "普通教室", 54, 40, [1]),
+        room("105", "阶梯教室", 96, 72, [3, 4]),
+        room("201", "智慧教室", 40, 36, [5, 6]),
+        room("203", "研讨教室", 24, 20, [2]),
+        room("205", "制图教室", 36, 30, [7, 8]),
+        room("305", "普通教室", 60, 45, [9, 10, 11]),
+        room("307", "多媒体教室", 48, 36, [4, 12]),
+        room("309", "智慧教室", 40, 36, [1, 12]),
+        room("401", "阶梯教室", 90, 68, [6, 7]),
+        room("403", "研讨教室", 28, 24, [3, 5]),
+        room("B101", "计算机房", 70, 51, [8, 9]),
+      ]
+        .filter(({ unavailableTimes }) => times.every((time) => !unavailableTimes.includes(time)))
+        .map((availableRoom) => ({
+          room_name: availableRoom.room_name,
+          room_type: availableRoom.room_type,
+          seat_count: availableRoom.seat_count,
+          exam_seat_count: availableRoom.exam_seat_count,
+        }));
+      const firstTime = times[0];
+      const period = firstTime <= 8 ? Math.ceil(firstTime / 2) : firstTime <= 11 ? 5 : 6;
+      return json(
+        ok({
+          time: period,
+          items: rooms,
+        }),
+      );
+    },
   ],
 ];
 
 const statefulRoutes = [
+  [
+    "PUT",
+    "/building/{building_id}/favorite",
+    ({ params, body }) => {
+      const building = fixtures.buildings.find((item) => item.building_id === params.building_id);
+      if (!building) return json({ code: "BUILDING_NOT_FOUND" }, 404);
+      if (typeof body?.favorite !== "boolean") {
+        return json({ code: "INVALID_REQUEST", data: "favorite 必须是布尔值。" }, 400);
+      }
+      state.buildingPreferences[building.building_id] = {
+        favorite: body.favorite,
+        last_query_at: state.buildingPreferences[building.building_id]?.last_query_at ?? null,
+      };
+      return json(ok(buildingView(building)));
+    },
+  ],
   [
     "GET",
     "/me/setting",
@@ -477,20 +741,29 @@ const statefulRoutes = [
   [
     "GET",
     "/classtable",
-    () =>
-      json(
-        ok([
-          ...fixtures.courses,
-          ...state.customCourses.flatMap((course) =>
-            course.times.map((time) => ({ ...course, time, times: undefined })),
-          ),
-        ]),
-      ),
+    ({ query }) =>
+      findSemester(query.get("xn"), query.get("xq"))
+        ? json(
+            ok([
+              ...fixtures.courses,
+              ...state.customCourses.flatMap((course) =>
+                course.times.map((time) => ({ ...course, time, times: undefined })),
+              ),
+            ]),
+          )
+        : json({ code: "INVALID_REQUEST" }, 400),
   ],
   [
     "POST",
     "/course/custom",
     ({ body }) => {
+      if (
+        !Number.isInteger(body?.xn) ||
+        !Number.isInteger(body?.xq) ||
+        !findSemester(String(body.xn), String(body.xq))
+      ) {
+        return json({ code: "INVALID_REQUEST" }, 400);
+      }
       const course = {
         ...body.course,
         customize_id: nextId(),
@@ -592,12 +865,41 @@ const statefulRoutes = [
         ]),
       ),
   ],
-  ["GET", "/exam", () => json(ok(state.exams))],
+  [
+    "GET",
+    "/exam",
+    ({ query }) => {
+      const type = query.get("type") || "recent";
+      const offsetValue = query.get("offset");
+      if (!["recent", "end"].includes(type)) {
+        return json({ code: "INVALID_REQUEST" }, 400);
+      }
+      if (type !== "end" && offsetValue !== null) {
+        return json({ code: "INVALID_REQUEST" }, 400);
+      }
+
+      const offset = offsetValue === null ? 0 : Number(offsetValue);
+      if (!Number.isInteger(offset) || offset < 0) {
+        return json({ code: "INVALID_REQUEST" }, 400);
+      }
+
+      const currentDateTime = shanghaiDateTimeKey();
+      const exams = state.exams.filter((exam) =>
+        type === "end" ? examHasEnded(exam, currentDateTime) : !examHasEnded(exam, currentDateTime),
+      );
+      return json(ok(type === "end" ? exams.slice(offset, offset + 10) : exams.slice(0, 10)));
+    },
+  ],
   [
     "POST",
     "/exam",
     ({ body }) => {
-      state.exams.push({ course_id: null, ...body, customize_id: nextId() });
+      state.exams.push({
+        course_id: null,
+        ...body,
+        customize_id: nextId(),
+        invalid: false,
+      });
       return success();
     },
   ],
@@ -786,12 +1088,11 @@ export function createMockServer({
         route.keys.map((key, index) => [key, decodeURIComponent(match[index + 1])]),
       );
       const body = await readBody(request);
-      let result = route.handler({ request, params, query: url.searchParams, body, random });
-
       const forcedStatus = Number(request.headers["x-mock-status"]);
-      if (Number.isInteger(forcedStatus) && forcedStatus >= 400 && forcedStatus <= 599) {
-        result = json({ code: `MOCK_${forcedStatus}` }, forcedStatus);
-      }
+      const result =
+        Number.isInteger(forcedStatus) && forcedStatus >= 400 && forcedStatus <= 599
+          ? json({ code: `MOCK_${forcedStatus}` }, forcedStatus)
+          : route.handler({ request, params, query: url.searchParams, body, random });
 
       response.writeHead(result.status, {
         "Content-Type": result.contentType || "application/json; charset=utf-8",

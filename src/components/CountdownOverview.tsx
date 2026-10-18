@@ -1,6 +1,5 @@
 import { BookOpenText, CalendarRange, PartyPopper, type LucideIcon } from "lucide-react";
 import type { CountdownInfo, HolidayCountdownInfo, SemesterCountdownInfo } from "../api/types";
-import { termName } from "../utils/format";
 import { Section } from "./ui";
 
 type CountdownTone = "warning" | "success" | "info" | "neutral";
@@ -71,21 +70,7 @@ function CountdownItem({
   );
 }
 
-function HolidayCountdownItem({ countdown }: { countdown: HolidayCountdownInfo | null }) {
-  if (!countdown) {
-    return (
-      <CountdownItem
-        icon={PartyPopper}
-        tone="neutral"
-        eyebrow="假期安排"
-        title="暂无后续假期"
-        detail="等待新的放假安排"
-        metricText="待公布"
-        ariaLabel="暂无后续假期安排，等待新的放假安排"
-      />
-    );
-  }
-
+function HolidayCountdownItem({ countdown }: { countdown: HolidayCountdownInfo }) {
   const isActive = countdown.status === "active";
   const dateRange = formatHolidayRange(countdown);
   const ariaLabel = isActive
@@ -122,7 +107,7 @@ function SemesterCountdownItem({ countdown }: { countdown: SemesterCountdownInfo
     );
   }
 
-  const title = `${countdown.xn} ${termName(countdown.xq)}`;
+  const title = `${countdown.xn} ${countdown.xq_text}`;
   const targetDate = formatMonthDay(countdown.target_date);
   if (countdown.status === "completed") {
     return (
@@ -157,7 +142,7 @@ export function CountdownOverview({ data }: { data: CountdownInfo }) {
   return (
     <Section title="倒计时" className="countdown-overview">
       <div className="countdown-list">
-        <HolidayCountdownItem countdown={data.holiday} />
+        {data.holiday ? <HolidayCountdownItem countdown={data.holiday} /> : null}
         <SemesterCountdownItem countdown={data.semester} />
       </div>
     </Section>

@@ -8,6 +8,11 @@ export interface CourseSession {
   endPeriod: number;
 }
 
+export interface CourseSessionStack {
+  primary: CourseSession;
+  sessions: CourseSession[];
+}
+
 export interface CoursePeriod {
   start: string;
   end: string;
@@ -36,21 +41,24 @@ export const courseStatusLabels: Readonly<Record<CourseStatus, string>> = {
 };
 
 function courseIdentity(course: Course) {
-  return [
-    course.customize_id ?? "",
-    course.course_id ?? "",
-    course.course_name,
-    course.class_name ?? "",
-    course.course_type ?? "",
-    course.credit ?? "",
-    course.day,
-    course.extra ?? "",
-    course.area ?? "",
-    course.place ?? "",
-    course.people ?? "",
-    course.teacher ?? "",
-    course.weeks.toSorted((left, right) => left - right).join(","),
-  ].join("|");
+  const field = (value: unknown) => (value === undefined ? [0] : [1, value]);
+  return JSON.stringify(
+    [
+      course.customize_id,
+      course.course_id,
+      course.course_name,
+      course.class_name,
+      course.course_type,
+      course.credit,
+      course.day,
+      course.extra,
+      course.area,
+      course.place,
+      course.people,
+      course.teacher,
+      course.weeks,
+    ].map(field),
+  );
 }
 
 export function groupCourseSessions(courses: readonly Course[]): CourseSession[] {
@@ -95,6 +103,52 @@ export function courseSessionPeriodLabel(session: CourseSession) {
 
 export function courseSessionKey(session: CourseSession) {
   return `${courseIdentity(session.course)}|${session.startPeriod}-${session.endPeriod}`;
+}
+
+export function buildCourseColorMap(courses: readonly Course[], paletteSize: number) {
+  if (!Number.isInteger(paletteSize) || paletteSize <= 0) {
+    throw new RangeError("paletteSize must be a positive integer");
+  }
+
+  const officialNames = new Set(
+    courses.filter((course) => course.customize_id === null).map((course) => course.course_name),
+  );
+  const customNames = new Set(
+    courses
+      .filter((course) => course.customize_id !== null && !officialNames.has(course.course_name))
+      .map((course) => course.course_name),
+  );
+  const orderedNames = [
+    ...[...officialNames].toSorted((left, right) => left.localeCompare(right, "zh-CN")),
+    ...[...customNames].toSorted((left, right) => left.localeCompare(right, "zh-CN")),
+  ];
+
+  return new Map(orderedNames.map((name, index) => [name, index % paletteSize]));
+}
+
+export function stackCourseSessions(
+  sessions: readonly CourseSession[],
+  selectedWeek: number,
+): CourseSessionStack[] {
+  const sessionsBySlot = new Map<string, CourseSession[]>();
+  for (const session of sessions) {
+    const slotKey = `${session.course.day}|${session.startPeriod}-${session.endPeriod}`;
+    const matchingSessions = sessionsBySlot.get(slotKey);
+    if (matchingSessions) matchingSessions.push(session);
+    else sessionsBySlot.set(slotKey, [session]);
+  }
+
+  return [...sessionsBySlot.values()].map((matchingSessions) => {
+    const orderedSessions = matchingSessions.toSorted((left, right) => {
+      const activeDifference =
+        Number(right.course.weeks.includes(selectedWeek)) -
+        Number(left.course.weeks.includes(selectedWeek));
+      return (
+        activeDifference || courseSessionKey(left).localeCompare(courseSessionKey(right), "zh-CN")
+      );
+    });
+    return { primary: orderedSessions[0], sessions: orderedSessions };
+  });
 }
 
 export function courseSessionTimes(session: CourseSession) {

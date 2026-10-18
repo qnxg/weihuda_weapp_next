@@ -1,21 +1,4 @@
-import type { GradeTerm, RankTerm } from "../api/types";
-
-export const gradeTermOptions = [
-  { value: "autumn", label: "秋季学期" },
-  { value: "winter", label: "冬季学期" },
-  { value: "spring", label: "春季学期" },
-  { value: "summer", label: "夏季学期" },
-] as const;
-
-export const rankTermOptions = gradeTermOptions.filter((option) => option.value !== "winter");
-
-export function isGradeTerm(value: string | null | undefined): value is GradeTerm {
-  return gradeTermOptions.some((option) => option.value === value);
-}
-
-export function isRankTerm(value: string | null | undefined): value is RankTerm {
-  return rankTermOptions.some((option) => option.value === value);
-}
+import type { SemesterId, SemesterItem, SemesterTable } from "../api/types";
 
 export function parseAcademicYear(value: string | null | undefined) {
   if (!value || !/^\d{4}$/.test(value)) return undefined;
@@ -23,14 +6,36 @@ export function parseAcademicYear(value: string | null | undefined) {
   return year >= 2000 && year <= 2100 ? year : undefined;
 }
 
-export function buildAcademicYears(
-  currentYear: number | undefined,
-  selectedYear?: number,
-  count = 6,
+export function parseSemesterId(value: string | null | undefined): SemesterId | undefined {
+  if (!value || !/^-?\d+$/.test(value)) return undefined;
+  const semesterId = Number(value);
+  return Number.isSafeInteger(semesterId) ? semesterId : undefined;
+}
+
+export function findSemester(
+  table: SemesterTable | undefined,
+  year: number | undefined,
+  semesterId: SemesterId | undefined,
 ) {
-  const years = currentYear ? Array.from({ length: count }, (_, index) => currentYear - index) : [];
-  if (selectedYear !== undefined && !years.includes(selectedYear)) years.unshift(selectedYear);
-  return years;
+  if (!table || year === undefined || semesterId === undefined) return undefined;
+  return table.items.find((item) => item.xn === year && item.xq === semesterId);
+}
+
+export function findCurrentSemester(table: SemesterTable | undefined) {
+  return findSemester(table, table?.now_xn, table?.now_xq);
+}
+
+export function academicYears(table: SemesterTable | undefined) {
+  return table ? [...new Set(table.items.map((semester) => semester.xn))] : [];
+}
+
+export function semestersForYear(
+  semesters: readonly SemesterItem[] | undefined,
+  year: number | undefined,
+): SemesterItem[] {
+  return semesters && year !== undefined
+    ? semesters.filter((semester) => semester.xn === year)
+    : [];
 }
 
 export function academicYearLabel(year: number) {

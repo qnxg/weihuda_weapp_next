@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bell, RotateCcw } from "lucide-react";
-import type { ReactNode } from "react";
+import { Bell, ChevronRight, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../api/api";
 import type { IndexCardKey, IndexCardSetting } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { CampusAccountOverview } from "../components/CampusAccountOverview";
 import { CountdownOverview } from "../components/CountdownOverview";
-import { NetworkOverview } from "../components/NetworkOverview";
+import { SemesterGradesOverview } from "../components/SemesterGradesOverview";
+import { TodayAnnouncements } from "../components/TodayAnnouncements";
 import { TodayCourses, TodayCoursesAuthPrompt } from "../components/TodayCourses";
 import {
   AuthPrompt,
@@ -15,17 +16,21 @@ import {
   PageSkeleton,
   QueryState,
   Section,
+  StatusMessage,
 } from "../components/ui";
 import { useMinuteClock } from "../hooks/useMinuteClock";
 import {
   currentWeekday,
-  formatDate,
+  daysUntilDate,
   formatDateHeading,
+  formatMonthDayWithWeekday,
   formatShanghaiDateKey,
+  formatTime,
   getCurrentWeek,
   isDateInSemester,
-  termName,
+  parseApiDate,
 } from "../utils/format";
+import { findCurrentSemester } from "../utils/semester";
 
 function calendarDateKey(date: Date) {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
@@ -37,74 +42,179 @@ const defaultIndexCards: readonly IndexCardKey[] = [
   "tasks",
   "electricity",
   "campus",
+  "email",
 ];
 
-function OverviewRow({
+type RecentMatterTone = "neutral" | "warning" | "success";
+
+interface RecentMatterItem {
+  key: string;
+  label: string;
+  title: string;
+  detail: string;
+  tone: RecentMatterTone;
+  to: string;
+  sortAt: number;
+}
+
+function recentMatterTone(days: number): RecentMatterTone {
+  if (days <= 2) return "warning";
+  if (days <= 4) return "success";
+  return "neutral";
+}
+
+function normalizeTimeRange(value: string | null | undefined) {
+  return value?.trim().replace(/\s*[-–—]\s*/g, "–") || null;
+}
+
+function recentMatterDetail({
+  date,
+  time,
+  place,
+}: {
+  date: string;
+  time?: string | null;
+  place?: string | null;
+}) {
+  return [formatMonthDayWithWeekday(date), normalizeTimeRange(time), place?.trim() || null]
+    .filter((item): item is string => Boolean(item))
+    .join(" ｜ ");
+}
+
+function collectRecentItems<T>(
+  items: readonly T[] | undefined,
+  dateOf: (item: T) => string | null,
+  mapItem: (item: T, index: number) => Omit<RecentMatterItem, "tone" | "sortAt">,
+  today: Date,
+) {
+  return (items ?? []).flatMap((item, index) => {
+    const value = dateOf(item);
+    if (!value) return [];
+    const days = daysUntilDate(value, today);
+    if (days === null || days < 0 || days > 6) return [];
+    return [
+      {
+        ...mapItem(item, index),
+        tone: recentMatterTone(days),
+        sortAt: parseApiDate(value)?.getTime() ?? Number.MAX_SAFE_INTEGER,
+      },
+    ];
+  });
+}
+
+function RecentMatterRow({
   label,
-  value,
+  title,
+  detail,
+  emptyText,
+  tone,
   state,
   to,
   onRetry,
 }: {
   label: string;
-  value: ReactNode;
+  title?: string;
+  detail?: string;
+  emptyText: string;
+  tone: RecentMatterTone;
   state: "pending" | "error" | "success";
-  to?: string;
+  to: string;
   onRetry: () => void;
 }) {
-  const content = (
-    <>
-      <span>{label}</span>
-      <strong className="text-clamp-2">{state === "pending" ? "加载中…" : value}</strong>
-    </>
+  const copy = (
+    <div className="today-recent-row__copy">
+      <span className="today-recent-row__label">{label}</span>
+      <strong className="text-clamp-2">
+        {state === "pending" ? "加载中…" : state === "error" ? "暂不可用" : (title ?? emptyText)}
+      </strong>
+      {state === "success" && title && detail ? (
+        <span className="today-recent-row__detail text-clamp-2">{detail}</span>
+      ) : null}
+    </div>
+  );
+  const rowClassName = `today-recent-row today-recent-row--${tone}`;
+  const stripe = (
+    <span className={`today-recent-row__stripe today-recent-row__stripe--${tone}`} aria-hidden />
   );
 
   if (state === "error") {
     return (
-      <div className="data-row">
-        <span>{label}</span>
-        <span className="cluster gap-8">
-          <strong>暂不可用</strong>
-          <button
-            className="button button--text button--small"
-            type="button"
-            aria-label={`重新加载${label}`}
-            onClick={onRetry}
-          >
-            重试
-          </button>
-        </span>
+      <div className={rowClassName} role="alert">
+        {stripe}
+        {copy}
+        <button
+          className="icon-button"
+          type="button"
+          aria-label={`重新加载${label}`}
+          title={`重新加载${label}`}
+          onClick={onRetry}
+        >
+          <RotateCcw aria-hidden="true" />
+        </button>
       </div>
     );
   }
 
-  return to ? (
-    <Link className="data-row" to={to}>
-      {content}
+  if (state === "pending" || !title) {
+    return (
+      <div
+        className={rowClassName}
+        role={state === "pending" ? "status" : undefined}
+        aria-label={state === "pending" ? `正在加载${label}` : undefined}
+      >
+        {stripe}
+        {copy}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      className={rowClassName}
+      to={to}
+      aria-label={`${label}，${title}${detail ? `，${detail}` : ""}`}
+    >
+      {stripe}
+      {copy}
+      <ChevronRight aria-hidden="true" />
     </Link>
-  ) : (
-    <div className="data-row">{content}</div>
   );
 }
 
 export default function TodayPage() {
   const { isAuthenticated } = useAuth();
   const now = useMinuteClock();
-  const semester = useQuery({
-    queryKey: ["semester", "current"],
+  const semesterTable = useQuery({
+    queryKey: ["semester"],
     queryFn: () => api.semester.get(),
   });
+  const semester = findCurrentSemester(semesterTable.data);
   const countdown = useQuery({
     queryKey: ["countdown", formatShanghaiDateKey(now)],
     queryFn: api.countdown.get,
     placeholderData: (previousData) => previousData,
   });
   const courses = useQuery({
-    queryKey: ["courses", semester.data?.xn, semester.data?.xq],
-    queryFn: () => api.course.table(semester.data!.xn, semester.data!.xq),
-    enabled: isAuthenticated && semester.data !== undefined,
+    queryKey: ["courses", semester?.xn, semester?.xq],
+    queryFn: () => api.course.table(semester!.xn, semester!.xq),
+    enabled: isAuthenticated && semester !== undefined,
   });
-  const exams = useQuery({ queryKey: ["exams"], queryFn: api.exam.list, enabled: isAuthenticated });
+  const exams = useQuery({
+    queryKey: ["exams", "recent"],
+    queryFn: () => api.exam.list("recent"),
+    enabled: isAuthenticated,
+    refetchInterval: 60_000,
+  });
+  const labSchedule = useQuery({
+    queryKey: ["lab", "schedule"],
+    queryFn: api.lab.schedule,
+    enabled: isAuthenticated,
+  });
+  const gymAppointments = useQuery({
+    queryKey: ["gym", "appointments"],
+    queryFn: api.gym.appointments,
+    enabled: isAuthenticated,
+  });
   const notices = useQuery({
     queryKey: ["notices", "unread"],
     queryFn: () => api.notice.list("unread"),
@@ -113,11 +223,6 @@ export default function TodayPage() {
   const cards = useQuery({
     queryKey: ["setting", "index_card"],
     queryFn: () => api.me.setting<IndexCardSetting>("index_card"),
-    enabled: isAuthenticated,
-  });
-  const points = useQuery({
-    queryKey: ["points"],
-    queryFn: api.points.summary,
     enabled: isAuthenticated,
   });
   const electricity = useQuery({
@@ -131,9 +236,9 @@ export default function TodayPage() {
     enabled: isAuthenticated,
   });
   const grades = useQuery({
-    queryKey: ["grades", semester.data?.xn, semester.data?.xq],
-    queryFn: () => api.grade.list(semester.data!.xn, semester.data!.xq),
-    enabled: isAuthenticated && semester.data !== undefined,
+    queryKey: ["grades", semester?.xn, semester?.xq],
+    queryFn: () => api.grade.list(semester!.xn, semester!.xq),
+    enabled: isAuthenticated && semester !== undefined,
   });
   const email = useQuery({
     queryKey: ["email", "unread"],
@@ -146,138 +251,112 @@ export default function TodayPage() {
     enabled: isAuthenticated,
     refetchInterval: 5 * 60 * 1000,
   });
+  const campusCard = useQuery({
+    queryKey: ["card", "info"],
+    queryFn: api.card.info,
+    enabled: isAuthenticated,
+  });
 
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const week = semester.data ? getCurrentWeek(semester.data, today) : null;
-  const tomorrowWeek = semester.data ? getCurrentWeek(semester.data, tomorrow) : null;
+  const week = semester ? getCurrentWeek(semester, today) : null;
+  const tomorrowWeek = semester ? getCurrentWeek(semester, tomorrow) : null;
   const day = currentWeekday(today);
   const tomorrowDay = currentWeekday(tomorrow);
   const todayCourses =
-    semester.data && courses.data && week !== null && isDateInSemester(semester.data, today)
+    semester && courses.data && week !== null && isDateInSemester(semester, today)
       ? courses.data
           .filter((course) => course.day === day && course.weeks.includes(week))
           .toSorted((left, right) => left.time - right.time)
       : [];
   const tomorrowCourses =
-    semester.data &&
-    courses.data &&
-    tomorrowWeek !== null &&
-    isDateInSemester(semester.data, tomorrow)
+    semester && courses.data && tomorrowWeek !== null && isDateInSemester(semester, tomorrow)
       ? courses.data
           .filter((course) => course.day === tomorrowDay && course.weeks.includes(tomorrowWeek))
           .toSorted((left, right) => left.time - right.time)
       : [];
-  const upcomingExam = exams.data?.find(
-    (exam) => exam.date && new Date(`${exam.date}T23:59:59`) >= new Date(),
-  );
+  const recentMatters = [
+    ...collectRecentItems(
+      exams.data,
+      (item) => (item.date ? `${item.date} ${item.start_time ?? "00:00"}` : null),
+      (item, index) => ({
+        key: `exam-${item.course_id ?? "custom"}-${item.date ?? "undated"}-${index}`,
+        label: "考试",
+        title: item.course_name,
+        detail: recentMatterDetail({
+          date: item.date!,
+          time: item.start_time
+            ? `${item.start_time}${item.end_time ? `-${item.end_time}` : ""}`
+            : null,
+          place: item.classroom || item.area,
+        }),
+        to: "/services/exams",
+      }),
+      now,
+    ),
+    ...collectRecentItems(
+      labSchedule.data,
+      (item) => item.date_time,
+      (item, index) => ({
+        key: `lab-${item.name}-${item.date_time}-${index}`,
+        label: "实验",
+        title: item.name,
+        detail: recentMatterDetail({
+          date: item.date_time,
+          time: formatTime(item.date_time),
+          place: item.place,
+        }),
+        to: "/services/lab/schedule",
+      }),
+      now,
+    ),
+    ...collectRecentItems(
+      gymAppointments.data,
+      (item) => item.show_date,
+      (item, index) => ({
+        key: `gym-${item.name}-${item.show_date}-${item.time}-${index}`,
+        label: "体测预约",
+        title: item.name,
+        detail: recentMatterDetail({
+          date: item.show_date,
+          time: item.time,
+        }),
+        to: "/services/gym/appointment",
+      }),
+      now,
+    ),
+  ].toSorted((left, right) => left.sortAt - right.sortAt);
+  const recentMattersLoaded =
+    exams.data !== undefined &&
+    labSchedule.data !== undefined &&
+    gymAppointments.data !== undefined;
   const configuredCards = cards.data?.setting.cards ?? defaultIndexCards;
-  const overviewCards = configuredCards.filter((card) => !["course", "tasks"].includes(card));
-
-  function overviewRow(card: IndexCardKey): ReactNode {
-    switch (card) {
-      case "jifen":
-        return (
-          <OverviewRow
-            label="积分与签到"
-            value={
-              points.data
-                ? `${points.data.jifen} 分 · 连续 ${points.data.combo} 天${points.data.is_checked ? " · 已签到" : ""}`
-                : ""
-            }
-            state={points.data ? "success" : points.isError ? "error" : "pending"}
-            to="/services/points"
-            onRetry={() => void points.refetch()}
-          />
-        );
-      case "electricity":
-        return (
-          <OverviewRow
-            label="宿舍电量"
-            value={electricity.data?.balance ?? ""}
-            state={electricity.data ? "success" : electricity.isError ? "error" : "pending"}
-            to="/services/dorm"
-            onRetry={() => void electricity.refetch()}
-          />
-        );
-      case "campus":
-        return (
-          <OverviewRow
-            label="校园动态"
-            value={announcements.data?.[0]?.title ?? "暂无公告"}
-            state={announcements.data ? "success" : announcements.isError ? "error" : "pending"}
-            to="/services/announcements"
-            onRetry={() => void announcements.refetch()}
-          />
-        );
-      case "count_down": {
-        const days = upcomingExam?.date
-          ? Math.max(
-              0,
-              Math.ceil(
-                (new Date(`${upcomingExam.date}T00:00:00`).getTime() - Date.now()) / 86_400_000,
-              ),
-            )
-          : null;
-        return (
-          <OverviewRow
-            label="考试倒计时"
-            value={days === null ? "暂无考试" : `${days} 天`}
-            state={exams.data ? "success" : exams.isError ? "error" : "pending"}
-            to="/services/exams"
-            onRetry={() => void exams.refetch()}
-          />
-        );
-      }
-      case "grade": {
-        const latest = grades.data?.[0];
-        return (
-          <OverviewRow
-            label="最新成绩"
-            value={
-              latest
-                ? `${latest.course_name} ${latest.score} · GPA ${latest.gpa ?? "—"}`
-                : "暂无成绩"
-            }
-            state={
-              grades.data ? "success" : semester.isError || grades.isError ? "error" : "pending"
-            }
-            to="/services/grades"
-            onRetry={() => void (semester.isError ? semester.refetch() : grades.refetch())}
-          />
-        );
-      }
-      case "email":
-        return (
-          <OverviewRow
-            label="校内邮箱"
-            value={email.data ? `${email.data.count} 封未读` : ""}
-            state={email.data ? "success" : email.isError ? "error" : "pending"}
-            onRetry={() => void email.refetch()}
-          />
-        );
-      default:
-        return null;
-    }
-  }
+  const announcementPreview = isAuthenticated ? (
+    <TodayAnnouncements
+      announcements={announcements.data}
+      isPending={announcements.isPending}
+      error={announcements.error}
+      onRetry={() => void announcements.refetch()}
+    />
+  ) : null;
 
   return (
     <div className="page">
       <PageHeader
         title={formatDateHeading(now)}
         description={
-          semester.data ? (
+          semester ? (
             <span aria-live="polite" aria-atomic="true">
-              {semester.data.xn} {termName(semester.data.xq)} ·{" "}
-              <strong>第 {getCurrentWeek(semester.data, now)} 周</strong>
+              {semester.xn} {semester.xq_text} ·{" "}
+              <strong>第 {getCurrentWeek(semester, now)} 周</strong>
             </span>
           ) : undefined
         }
         leadingAction={
           <Link
-            className="icon-button"
+            className="icon-button today-notice-button"
             to="/notices"
             aria-label={
               isAuthenticated && notices.data
@@ -288,25 +367,35 @@ export default function TodayPage() {
             }
           >
             <Bell aria-hidden="true" />
+            {isAuthenticated && notices.data && notices.data.count > 0 ? (
+              <span className="today-notice-button__badge" aria-hidden="true">
+                {notices.data.count > 99 ? "99+" : notices.data.count}
+              </span>
+            ) : null}
           </Link>
-        }
-        action={
-          semester.isError ? (
-            <button
-              className="icon-button"
-              type="button"
-              onClick={() => void semester.refetch()}
-              aria-label="重新加载学期信息"
-            >
-              <RotateCcw aria-hidden="true" />
-            </button>
-          ) : null
         }
       />
 
+      {!isAuthenticated && semesterTable.isError && semesterTable.data === undefined ? (
+        <StatusMessage tone="danger">
+          <span className="flex-1">学期信息加载失败。</span>
+          <button
+            className="button button--text button--small"
+            type="button"
+            aria-label="重新加载学期信息"
+            onClick={() => void semesterTable.refetch()}
+          >
+            <RotateCcw aria-hidden="true" />
+            重试
+          </button>
+        </StatusMessage>
+      ) : null}
+
+      {announcementPreview}
+
       {!isAuthenticated ? (
         <TodayCoursesAuthPrompt />
-      ) : configuredCards.includes("course") && semester.data && courses.data ? (
+      ) : configuredCards.includes("course") && semester && courses.data ? (
         <TodayCourses
           key={calendarDateKey(today)}
           todayCourses={todayCourses}
@@ -316,8 +405,8 @@ export default function TodayPage() {
           now={now}
         />
       ) : configuredCards.includes("course") ? (
-        <Section title="今日与明日课程">
-          <QueryState query={semester} loadingRows={3}>
+        <Section title="今日与明日课程" className="today-courses">
+          <QueryState query={semesterTable} loadingRows={3}>
             {() => (
               <QueryState query={courses} loadingRows={3}>
                 {() => null}
@@ -340,23 +429,20 @@ export default function TodayPage() {
       )}
 
       {!isAuthenticated ? (
-        <Section title="校园网">
+        <Section title="校园账户">
           <AuthPrompt
             headingLevel={3}
-            title="登录后查看校园网"
-            description="查看本月流量、账号状态和欠费信息。"
+            title="登录后查看校园账户"
+            description="查看校园网、邮件、宿舍电量和校园卡余额。"
           />
         </Section>
-      ) : network.isError && network.data === undefined ? (
-        <Section title="校园网">
-          <PageError error={network.error} onRetry={() => void network.refetch()} />
-        </Section>
-      ) : network.data ? (
-        <NetworkOverview data={network.data} />
       ) : (
-        <Section title="校园网">
-          <PageSkeleton rows={2} />
-        </Section>
+        <CampusAccountOverview
+          network={network}
+          email={email}
+          electricity={electricity}
+          campusCard={campusCard}
+        />
       )}
 
       <Section title="近期事项">
@@ -364,73 +450,87 @@ export default function TodayPage() {
           <AuthPrompt
             headingLevel={3}
             title="登录后查看近期事项"
-            description="考试安排和未读通知需要登录后查看。"
+            description="考试、实验和体测预约需要登录后查看。"
           />
         ) : (
-          <div className="surface">
-            {configuredCards.includes("tasks") && exams.isError && !exams.data ? (
-              <OverviewRow
-                label="近期考试"
-                value=""
-                state="error"
+          <div className="surface list today-recent-list">
+            {recentMatters.map((matter) => (
+              <RecentMatterRow
+                key={matter.key}
+                label={matter.label}
+                title={matter.title}
+                detail={matter.detail}
+                emptyText=""
+                tone={matter.tone}
+                state="success"
+                to={matter.to}
+                onRetry={() => undefined}
+              />
+            ))}
+            {exams.data === undefined ? (
+              <RecentMatterRow
+                label="考试"
+                emptyText=""
+                tone="neutral"
+                state={exams.isError ? "error" : "pending"}
+                to="/services/exams"
                 onRetry={() => void exams.refetch()}
               />
-            ) : configuredCards.includes("tasks") && !exams.data ? (
-              <OverviewRow
-                label="近期考试"
-                value=""
-                state="pending"
-                onRetry={() => void exams.refetch()}
-              />
-            ) : configuredCards.includes("tasks") && upcomingExam ? (
-              <Link className="data-row" to="/services/exams">
-                <div className="min-w-0">
-                  <p className="data-row__label">
-                    {upcomingExam.date ? formatDate(upcomingExam.date) : "日期待定"}
-                  </p>
-                  <strong className="text-clamp-2">{upcomingExam.course_name}</strong>
-                </div>
-                <span className="badge badge--warning">考试</span>
-              </Link>
-            ) : configuredCards.includes("tasks") ? (
-              <p className="muted text-sm surface--padded">近期没有考试安排。</p>
             ) : null}
-            <OverviewRow
-              label="未读通知"
-              value={notices.data?.count ?? ""}
-              state={notices.data ? "success" : notices.isError ? "error" : "pending"}
-              to="/notices"
-              onRetry={() => void notices.refetch()}
-            />
+            {labSchedule.data === undefined ? (
+              <RecentMatterRow
+                label="实验"
+                emptyText=""
+                tone="neutral"
+                state={labSchedule.isError ? "error" : "pending"}
+                to="/services/lab/schedule"
+                onRetry={() => void labSchedule.refetch()}
+              />
+            ) : null}
+            {gymAppointments.data === undefined ? (
+              <RecentMatterRow
+                label="体测预约"
+                emptyText=""
+                tone="neutral"
+                state={gymAppointments.isError ? "error" : "pending"}
+                to="/services/gym/appointment"
+                onRetry={() => void gymAppointments.refetch()}
+              />
+            ) : null}
+            {recentMattersLoaded && recentMatters.length === 0 ? (
+              <p className="today-recent-list__empty">未来 6 天暂无考试、实验或体测预约</p>
+            ) : null}
           </div>
         )}
       </Section>
 
       {!isAuthenticated ? (
-        <Section title="校园速览">
+        <Section title="课程成绩">
           <AuthPrompt
             headingLevel={3}
-            title="登录后查看校园速览"
-            description="首页卡片会按你的个人设置展示。"
+            title="登录后查看课程成绩"
+            description="查看当前学期已公布的课程成绩和绩点。"
           />
         </Section>
-      ) : cards.isError && !cards.data ? (
-        <Section title="校园速览">
-          <PageError error={cards.error} onRetry={() => void cards.refetch()} />
+      ) : !semester ? (
+        <Section title="课程成绩">
+          {semesterTable.isError ? (
+            <PageError error={semesterTable.error} onRetry={() => void semesterTable.refetch()} />
+          ) : (
+            <PageSkeleton rows={2} />
+          )}
         </Section>
-      ) : cards.data && overviewCards.length ? (
-        <Section title="校园速览" description={`按首页设置展示 · 版本 ${cards.data.version}`}>
-          <div className="surface list">
-            {overviewCards.map((card) => (
-              <div key={card}>{overviewRow(card)}</div>
-            ))}
-          </div>
+      ) : grades.isError && grades.data === undefined ? (
+        <Section title="课程成绩">
+          <PageError error={grades.error} onRetry={() => void grades.refetch()} />
         </Section>
-      ) : cards.isPending ? (
-        <Section title="校园速览">
+      ) : grades.data ? (
+        <SemesterGradesOverview semester={semester} grades={grades.data} />
+      ) : (
+        <Section title="课程成绩">
           <PageSkeleton rows={3} />
         </Section>
-      ) : null}
+      )}
     </div>
   );
 }

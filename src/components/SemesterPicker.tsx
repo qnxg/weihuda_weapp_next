@@ -1,21 +1,13 @@
-import { useQueries } from "@tanstack/react-query";
-import { api } from "../api/api";
-import type { GradeTerm, Semester } from "../api/types";
-import { parseApiDate, termName } from "../utils/format";
+import type { SemesterId, SemesterItem } from "../api/types";
+import { parseApiDate } from "../utils/format";
+import { academicYearLabel } from "../utils/semester";
 import { Modal } from "./ui";
 
 export interface SemesterOption {
   year: number;
-  term: GradeTerm;
+  term: SemesterId;
+  text: string;
 }
-
-export const scheduleTerms = ["autumn", "spring"] as const satisfies readonly GradeTerm[];
-export const gradeTerms = [
-  "autumn",
-  "winter",
-  "spring",
-  "summer",
-] as const satisfies readonly GradeTerm[];
 
 const semesterDateFormatter = new Intl.DateTimeFormat("zh-CN", {
   year: "numeric",
@@ -27,15 +19,15 @@ export function semesterOptionValue({ year, term }: SemesterOption) {
   return `${year}:${term}`;
 }
 
-export function semesterOptionLabel({ year, term }: SemesterOption) {
-  return `${year}-${year + 1} ${termName(term)}`;
+export function semesterOptionLabel({ year, text }: SemesterOption) {
+  return `${year}-${year + 1} ${text}`;
 }
 
-export function semesterHeadingLabel({ year, term }: SemesterOption) {
-  return `${year}-${year + 1} 学年 ${termName(term)}`;
+export function semesterHeadingLabel({ year, text }: SemesterOption) {
+  return `${year}-${year + 1} 学年 ${text}`;
 }
 
-function formatSemesterDateRange(semester: Semester) {
+function formatSemesterDateRange(semester: SemesterItem) {
   const start = parseApiDate(semester.start);
   if (!start) return "日期范围待定";
   const end = new Date(start);
@@ -43,72 +35,31 @@ function formatSemesterDateRange(semester: Semester) {
   return `${semesterDateFormatter.format(start)} - ${semesterDateFormatter.format(end)}`;
 }
 
-export function buildSemesterOptions(
-  current: SemesterOption,
-  selected: SemesterOption,
-  terms: readonly GradeTerm[],
-  count = 6,
-) {
-  const options: SemesterOption[] = [];
-  let year = current.year;
-  let term = current.term;
-
-  while (options.length < count) {
-    options.push({ year, term });
-    const termIndex = terms.indexOf(term);
-    if (termIndex > 0) {
-      term = terms[termIndex - 1];
-    } else {
-      year -= 1;
-      term = terms.at(-1) ?? term;
-    }
-  }
-
-  if (!options.some((option) => semesterOptionValue(option) === semesterOptionValue(selected))) {
-    options.unshift(selected);
-  }
-  return options;
-}
-
 export function SemesterPickerDialog({
   selected,
-  selectedSemester,
   current,
-  terms = scheduleTerms,
+  semesters,
   onSelect,
   onClose,
 }: {
   selected: SemesterOption;
-  selectedSemester?: Semester;
-  current?: Semester;
-  terms?: readonly GradeTerm[];
+  current?: SemesterItem;
+  semesters: readonly SemesterItem[];
   onSelect: (option: SemesterOption) => void;
   onClose: () => void;
 }) {
-  const anchor = current ? { year: current.xn, term: current.xq } : selected;
-  const options = buildSemesterOptions(anchor, selected, terms);
-  const semesterQueries = useQueries({
-    queries: options.map((option) => {
-      const knownSemester = [selectedSemester, current].find(
-        (item) => item?.xn === option.year && item.xq === option.term,
-      );
-      return {
-        queryKey: ["semester", option.year, option.term],
-        queryFn: () => api.semester.get(option.year, option.term),
-        initialData: knownSemester,
-        staleTime: 5 * 60 * 1000,
-      };
-    }),
-  });
-
   return (
     <Modal title="选择学期" onClose={onClose}>
       <div className="semester-option-list" aria-label="可选学期">
-        {options.map((option, index) => {
+        {semesters.map((semester) => {
+          const option = {
+            year: semester.xn,
+            term: semester.xq,
+            text: semester.xq_text,
+          };
           const value = semesterOptionValue(option);
           const isSelected = value === semesterOptionValue(selected);
           const isCurrent = current?.xn === option.year && current.xq === option.term;
-          const semesterQuery = semesterQueries[index];
           return (
             <button
               className={`semester-option${isSelected ? " is-selected" : ""}`}
@@ -120,13 +71,51 @@ export function SemesterPickerDialog({
             >
               <span className="semester-option__copy">
                 <strong>{semesterOptionLabel(option)}</strong>
-                <span>
-                  {semesterQuery.data
-                    ? formatSemesterDateRange(semesterQuery.data)
-                    : semesterQuery.isError
-                      ? "日期范围暂不可用"
-                      : "正在加载日期…"}
+                <span>{formatSemesterDateRange(semester)}</span>
+              </span>
+              {isCurrent ? (
+                <span className="semester-option__status">
+                  <span>当前</span>
                 </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
+export function AcademicYearPickerDialog({
+  selected,
+  current,
+  years,
+  onSelect,
+  onClose,
+}: {
+  selected: number;
+  current: number;
+  years: readonly number[];
+  onSelect: (year: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal title="选择学年" onClose={onClose}>
+      <div className="semester-option-list" aria-label="可选学年">
+        {years.map((year) => {
+          const isSelected = year === selected;
+          const isCurrent = year === current;
+          return (
+            <button
+              className={`semester-option${isSelected ? " is-selected" : ""}`}
+              type="button"
+              key={year}
+              aria-label={`${academicYearLabel(year)}${isCurrent ? "，当前学年" : ""}`}
+              aria-pressed={isSelected}
+              onClick={() => onSelect(year)}
+            >
+              <span className="semester-option__copy">
+                <strong>{academicYearLabel(year)}</strong>
               </span>
               {isCurrent ? (
                 <span className="semester-option__status">

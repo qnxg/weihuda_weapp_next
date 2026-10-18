@@ -82,15 +82,14 @@ export interface Rank {
   core: RankDetail | null;
 }
 
-export type GradeTerm = "autumn" | "winter" | "spring" | "summer";
-export type RankTerm = Exclude<GradeTerm, "winter">;
+export type SemesterId = number;
 export type RankRange = "major" | "minor";
 export type RankDataSource = "total" | "execution";
 export type RankDisplay = "max" | "initial";
 
 export interface RankQuery {
   xn?: number;
-  xq?: RankTerm;
+  xq?: SemesterId;
   range?: RankRange;
   data_source?: RankDataSource;
   display?: RankDisplay;
@@ -139,12 +138,19 @@ export interface CustomCourseRequest {
   teacher: string | null;
 }
 
-export interface Semester {
+export interface SemesterItem {
   xn: number;
-  xq: GradeTerm;
+  xq: SemesterId;
+  xq_text: string;
   start: string;
   weeks: number;
   from_zero: boolean;
+}
+
+export interface SemesterTable {
+  items: SemesterItem[];
+  now_xn: number;
+  now_xq: SemesterId;
 }
 
 export interface HolidayCountdownInfo {
@@ -158,7 +164,8 @@ export interface HolidayCountdownInfo {
 
 export interface SemesterCountdownInfo {
   xn: number;
-  xq: "spring" | "summer" | "autumn" | "winter";
+  xq: SemesterId;
+  xq_text: string;
   target_date: string;
   weeks: number;
   status: "upcoming" | "active" | "completed";
@@ -168,6 +175,64 @@ export interface SemesterCountdownInfo {
 export interface CountdownInfo {
   holiday: HolidayCountdownInfo | null;
   semester: SemesterCountdownInfo | null;
+}
+
+export interface AcademicCalendarWeek {
+  week_text: string;
+  description: string;
+  dates: string[];
+}
+
+export interface AcademicCalendarNote {
+  title: string;
+  content: string;
+}
+
+export interface AcademicCalendarPeriod {
+  name: string;
+  start: string;
+  end: string;
+  total_weeks: number;
+  weeks: AcademicCalendarWeek[];
+  notes: AcademicCalendarNote[];
+}
+
+export interface AcademicCalendar {
+  name: string;
+  period: AcademicCalendarPeriod;
+}
+
+export interface AcademicCalendarPeriodItem {
+  id: number;
+  name: string;
+}
+
+export interface AcademicCalendarYearItem {
+  xn: string;
+  periods: AcademicCalendarPeriodItem[];
+}
+
+export interface AcademicCalendarList {
+  items: AcademicCalendarYearItem[];
+  now_id: number;
+}
+
+export interface AcademicCalendarPreviousWeek {
+  index: number;
+  name: string;
+}
+
+export interface AcademicCalendarDetailNote {
+  key: string;
+  value: string;
+}
+
+export interface AcademicCalendarDetail {
+  from: string;
+  to: string;
+  name: string;
+  prev: AcademicCalendarPreviousWeek[];
+  notes: AcademicCalendarDetailNote[];
 }
 
 export interface Points {
@@ -276,7 +341,7 @@ export interface Announcement {
   created_at: string;
 }
 
-export interface Exam {
+export interface ExamScheduleItem {
   course_id: string | null;
   course_name: string;
   area: string | null;
@@ -285,10 +350,13 @@ export interface Exam {
   start_time: string | null;
   end_time: string | null;
   seat: string | null;
-  customize_id: number;
+  customize_id: number | null;
+  invalid: boolean;
 }
 
-export interface CustomExamRequest {
+export type ExamScheduleType = "recent" | "end";
+
+export interface CustomExamScheduleRequest {
   course_name: string;
   area: string;
   classroom: string;
@@ -410,11 +478,24 @@ export interface NoticeList {
   notices: Notice[];
 }
 
+export interface Building {
+  building_id: string;
+  building_name: string;
+  description: string | null;
+  favorite: boolean;
+  last_query_at: string | null;
+}
+
 export interface EmptyRoom {
   room_name: string;
   room_type: string;
   seat_count: number;
   exam_seat_count: number;
+}
+
+export interface EmptyRoomResult {
+  time: number;
+  items: EmptyRoom[];
 }
 
 export interface About {

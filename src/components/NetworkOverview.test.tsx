@@ -34,7 +34,7 @@ describe("NetworkOverview", () => {
       }),
     ).toHaveAttribute("href", "/services/network");
     expect(screen.getByRole("progressbar", { name: "免费流量已使用 32%" })).toHaveValue(0.32);
-    expect(screen.getByRole("progressbar")).toHaveClass("network-overview__progress--normal");
+    expect(screen.getByRole("progressbar")).toHaveClass("progress-bar--success");
     expect(screen.getByText("免费流量")).toBeVisible();
     expect(screen.getByText("40GB")).toBeVisible();
     expect(screen.getByText("正常")).toHaveClass("is-normal");
@@ -61,13 +61,13 @@ describe("NetworkOverview", () => {
   });
 
   it.each([
-    [0.5, "normal"],
+    [0.5, "success"],
     [0.5001, "warning"],
     [0.9, "warning"],
     [0.9001, "primary"],
   ])("uses the %s usage ratio as the %s progress tone", (basePercentage, tone) => {
     renderOverview({ ...normalNetwork, base_percentage: basePercentage });
 
-    expect(screen.getByRole("progressbar")).toHaveClass(`network-overview__progress--${tone}`);
+    expect(screen.getByRole("progressbar")).toHaveClass(`progress-bar--${tone}`);
   });
 });

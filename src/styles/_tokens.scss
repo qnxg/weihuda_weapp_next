@@ -1,33 +1,86 @@
+$course-cell-background-colors: (
+  #e6f4ff,
+  #fdebdd,
+  #defbf7,
+  #eeedff,
+  #fcebcd,
+  #ffeff0,
+  #eaf2ff,
+  #ffeef8,
+  #faedff,
+  #fff9c9
+);
+
+$course-cell-text-colors: (
+  #0f6e99,
+  #a84732,
+  #1f747a,
+  #6260ad,
+  #875600,
+  #ad425a,
+  #4568bd,
+  #ad417f,
+  #7d419d,
+  #796600
+);
+
+$course-detail-background-colors: (
+  #1579a6,
+  #b95540,
+  #1f747a,
+  #6260ad,
+  #966000,
+  #ad425a,
+  #4568bd,
+  #ad417f,
+  #7d419d,
+  #796600
+);
+
+$course-detail-inactive-background: #707070;
+
 :root {
-  --brand-minus-2: #fcebea;
-  --brand-minus-1: #eab3b1;
-  --brand: #c13432;
-  --brand-plus-1: #972826;
-  --brand-plus-2: #6f1d1c;
+  --brand-minus-2: #e9f3fc;
+  --brand-minus-1: #a7c9e4;
+  --brand: #318cca;
+  --brand-plus-1: #2d638a;
+  --brand-plus-2: #1a415c;
   --brand-dark: var(--brand-plus-1);
   --brand-soft: var(--brand-minus-2);
-  --brand-state: rgb(193 52 50 / 10%);
-  --canvas: #f7f8fa;
+  --brand-state: rgb(49 140 202 / 10%);
+  --backdrop: #edf2f5;
+  --canvas: #f5f8fa;
   --surface: #ffffff;
-  --surface-subtle: #f8f9fb;
-  --ink: #25272b;
-  --muted: #6b7078;
-  --line: #e8eaee;
-  --line-strong: #cfd3da;
-  --success-minus-2: #eaf4ef;
-  --success-minus-1: #acccbc;
-  --success: #367356;
-  --success-plus-1: #285a43;
-  --success-plus-2: #193e2d;
+  --surface-subtle: #f2f6f8;
+  --surface-muted: #eaf0f4;
+  --skeleton: #e1e8ed;
+  --ink: #1f2b34;
+  --muted: #64727d;
+  --line: #dfe7ec;
+  --line-strong: #becbd4;
+  --success-minus-2: #ebf4ef;
+  --success-minus-1: #afccbd;
+  --success: #408c67;
+  --success-plus-1: #276d4c;
+  --success-plus-2: #114830;
   --success-soft: var(--success-minus-2);
-  --warning-minus-2: #fff4e2;
-  --warning-minus-1: #e7c58f;
-  --warning: #946017;
-  --warning-plus-1: #71470e;
-  --warning-plus-2: #4d3008;
+  --warning-minus-2: #fff3e0;
+  --warning-minus-1: #dfc18d;
+  --warning: #a06f29;
+  --warning-plus-1: #7f530f;
+  --warning-plus-2: #563500;
   --warning-soft: var(--warning-minus-2);
-  --info: #246b8e;
-  --info-soft: #eef6f9;
+  --error-minus-2: #ffedee;
+  --error-minus-1: #eab4b7;
+  --error: #c24d5d;
+  --error-plus-1: #9c3444;
+  --error-plus-2: #6b1c2a;
+  --error-soft: var(--error-minus-2);
+  --danger: var(--error);
+  --danger-soft: var(--error-soft);
+  --info: var(--brand-plus-1);
+  --info-soft: var(--brand-minus-2);
+  --info-surface: var(--brand);
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;

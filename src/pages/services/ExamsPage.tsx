@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
+import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { api } from "../../api/api";
-import type { CustomExamRequest, Exam } from "../../api/types";
+import type { CustomExamScheduleRequest, ExamScheduleItem } from "../../api/types";
+import { PageFootnotes } from "../../components/PageFootnotes";
 import {
   ConfirmDialog,
   EmptyState,
@@ -13,7 +14,160 @@ import {
   Section,
   StatusMessage,
 } from "../../components/ui";
+import { useMinuteClock } from "../../hooks/useMinuteClock";
+import { getExamStatus, type ExamDisplayItem, type ExamStatus } from "../../utils/exam";
 import { formatDate } from "../../utils/format";
+
+type ExamTab = "unfinished" | "finished";
+const EXAM_PAGE_SIZE = 10;
+const examSourceFootnote = "非自定义考试安排数据来源于教务系统。";
+const unfinishedExamFootnotes = [examSourceFootnote] as const;
+const finishedExamFootnotes = [
+  examSourceFootnote,
+  "已失效的考试安排是原来出现于教务系统，但是可能由于考试安排信息发生更改或是到了新的学期，之前的考试安排已经不存在，微生活将其标记为“已失效”。",
+] as const;
+
+const examStatusLabels: Record<ExamStatus, string> = {
+  scheduled: "未开始",
+  active: "考试中",
+  completed: "已结束",
+  invalid: "已失效",
+};
+
+const examStatusBadgeClasses: Record<ExamStatus, string> = {
+  scheduled: "badge--brand",
+  active: "badge--success",
+  completed: "",
+  invalid: "badge--warning",
+};
+
+function examTimeLabel(exam: ExamScheduleItem) {
+  return `${exam.start_time || "开始待定"} – ${exam.end_time || "结束待定"}`;
+}
+
+function examVenueLabel(exam: ExamScheduleItem) {
+  const venue = exam.classroom || exam.area || "地点待定";
+  return exam.seat ? `${venue} · ${exam.seat}` : venue;
+}
+
+function examMetaLabel(exam: ExamScheduleItem, isCustom: boolean) {
+  return isCustom ? "自定义考试" : exam.course_id || "教务安排";
+}
+
+function ExamTabs({ selected, onSelect }: { selected: ExamTab; onSelect: (tab: ExamTab) => void }) {
+  const unfinishedRef = useRef<HTMLButtonElement>(null);
+  const finishedRef = useRef<HTMLButtonElement>(null);
+
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    let next: ExamTab | null = null;
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      next = selected === "unfinished" ? "finished" : "unfinished";
+    }
+    if (event.key === "Home") next = "unfinished";
+    if (event.key === "End") next = "finished";
+    if (!next) return;
+
+    event.preventDefault();
+    onSelect(next);
+    (next === "unfinished" ? unfinishedRef : finishedRef).current?.focus();
+  }
+
+  return (
+    <div className="segmented exam-tabs" role="tablist" aria-label="考试安排状态">
+      <button
+        className={selected === "unfinished" ? "is-active" : ""}
+        id="exam-tab-unfinished"
+        ref={unfinishedRef}
+        type="button"
+        role="tab"
+        aria-controls="exam-tab-panel"
+        aria-selected={selected === "unfinished"}
+        tabIndex={selected === "unfinished" ? 0 : -1}
+        onClick={() => onSelect("unfinished")}
+        onKeyDown={handleKeyDown}
+      >
+        未结束
+      </button>
+      <button
+        className={selected === "finished" ? "is-active" : ""}
+        id="exam-tab-finished"
+        ref={finishedRef}
+        type="button"
+        role="tab"
+        aria-controls="exam-tab-panel"
+        aria-selected={selected === "finished"}
+        tabIndex={selected === "finished" ? 0 : -1}
+        onClick={() => onSelect("finished")}
+        onKeyDown={handleKeyDown}
+      >
+        已结束
+      </button>
+    </div>
+  );
+}
+
+function ExamCard({
+  item: { exam, status },
+  onEdit,
+  onDelete,
+}: {
+  item: ExamDisplayItem;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const isCustom = exam.customize_id !== null;
+  const isEditDisabled = status === "completed" || status === "invalid";
+  const badgeClass = examStatusBadgeClasses[status];
+
+  return (
+    <article
+      className={`exam-card exam-card--${status}`}
+      aria-label={`${exam.course_name}，${examStatusLabels[status]}`}
+    >
+      <div className="exam-card__content">
+        <p className="exam-card__date">
+          {exam.date ? <time dateTime={exam.date}>{formatDate(exam.date)}</time> : "日期待定"}
+        </p>
+        <span className={`badge exam-card__status${badgeClass ? ` ${badgeClass}` : ""}`}>
+          {examStatusLabels[status]}
+        </span>
+
+        <h2 className="exam-card__title">{exam.course_name}</h2>
+        <p className="exam-card__venue" title={examVenueLabel(exam)}>
+          {examVenueLabel(exam)}
+        </p>
+
+        <p className="exam-card__meta" title={examMetaLabel(exam, isCustom)}>
+          {examMetaLabel(exam, isCustom)}
+        </p>
+        <p className="exam-card__time tabular">{examTimeLabel(exam)}</p>
+      </div>
+
+      {isCustom ? (
+        <footer className="exam-card__actions">
+          <button
+            className="exam-card__action"
+            type="button"
+            title={isEditDisabled ? "已结束的考试不能编辑" : undefined}
+            disabled={isEditDisabled}
+            onClick={onEdit}
+          >
+            <Pencil aria-hidden="true" />
+            编辑
+          </button>
+          <button
+            className="exam-card__action exam-card__action--danger"
+            type="button"
+            onClick={onDelete}
+          >
+            <Trash2 aria-hidden="true" />
+            删除
+          </button>
+        </footer>
+      ) : null}
+    </article>
+  );
+}
 
 function ExamEditor({
   exam,
@@ -22,10 +176,10 @@ function ExamEditor({
   onSubmit,
   onClose,
 }: {
-  exam: Exam | null;
+  exam: ExamScheduleItem | null;
   pending: boolean;
   error: string;
-  onSubmit: (input: CustomExamRequest) => void;
+  onSubmit: (input: CustomExamScheduleRequest) => void;
   onClose: () => void;
 }) {
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -127,13 +281,31 @@ function ExamEditor({
 
 export default function ExamsPage() {
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState<Exam | null | undefined>();
-  const [deleting, setDeleting] = useState<Exam | null>(null);
+  const now = useMinuteClock();
+  const [selectedTab, setSelectedTab] = useState<ExamTab>("unfinished");
+  const [editing, setEditing] = useState<ExamScheduleItem | null | undefined>();
+  const [deleting, setDeleting] = useState<ExamScheduleItem | null>(null);
   const [error, setError] = useState("");
-  const exams = useQuery({ queryKey: ["exams"], queryFn: api.exam.list });
+  const recentExams = useQuery({
+    queryKey: ["exams", "recent"],
+    queryFn: () => api.exam.list("recent"),
+    refetchInterval: 60_000,
+  });
+  const endedExams = useInfiniteQuery({
+    queryKey: ["exams", "end"],
+    queryFn: ({ pageParam }) => api.exam.list("end", pageParam),
+    initialPageParam: 0,
+    refetchInterval: 60_000,
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length === EXAM_PAGE_SIZE
+        ? pages.reduce((count, page) => count + page.length, 0)
+        : undefined,
+  });
   const save = useMutation({
-    mutationFn: (input: CustomExamRequest) =>
-      editing ? api.exam.update(editing.customize_id, input) : api.exam.create(input),
+    mutationFn: (input: CustomExamScheduleRequest) =>
+      editing && editing.customize_id !== null
+        ? api.exam.update(editing.customize_id, input)
+        : api.exam.create(input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["exams"] });
       setEditing(undefined);
@@ -148,98 +320,101 @@ export default function ExamsPage() {
       setDeleting(null);
     },
   });
-
-  if (exams.isPending)
-    return (
-      <div className="page">
-        <PageSkeleton rows={5} />
-      </div>
-    );
-  if (exams.isError) {
-    return (
-      <div className="page">
-        <PageHeader title="考试安排" back />
-        <PageError error={exams.error} onRetry={() => void exams.refetch()} />
-      </div>
-    );
-  }
+  const unfinished = (recentExams.data ?? []).map((exam) => ({
+    exam,
+    status: getExamStatus(exam, now),
+  }));
+  const finished = (endedExams.data?.pages.flat() ?? []).map((exam) => ({
+    exam,
+    status: getExamStatus(exam, now),
+  }));
+  const visibleExams = selectedTab === "unfinished" ? unfinished : finished;
+  const selectedQuery = selectedTab === "unfinished" ? recentExams : endedExams;
+  const selectedHasData =
+    selectedTab === "unfinished" ? recentExams.data !== undefined : endedExams.data !== undefined;
+  const initialError = selectedQuery.isError && !selectedHasData;
+  const selectedRefetchError = selectedQuery.isRefetchError && selectedHasData;
+  const retrySelectedQuery = () => {
+    void selectedQuery.refetch();
+  };
 
   return (
     <div className="page">
-      <PageHeader
-        title="考试安排"
-        description={`近期 ${exams.data.length} 场考试`}
-        back
-        action={
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="添加自定义考试"
-            onClick={() => setEditing(null)}
-          >
-            <Plus aria-hidden="true" />
-          </button>
-        }
-      />
+      <PageHeader title="考试安排" back />
 
-      <Section>
-        {exams.data.length ? (
-          <div className="surface list">
-            {exams.data.map((exam, index) => (
-              <article
-                className="exam-item stack gap-8"
-                key={`${exam.course_name}-${exam.customize_id}-${index}`}
+      <ExamTabs selected={selectedTab} onSelect={setSelectedTab} />
+
+      <div
+        className="exam-tab-panel"
+        id="exam-tab-panel"
+        role="tabpanel"
+        aria-labelledby={`exam-tab-${selectedTab}`}
+        tabIndex={0}
+      >
+        <Section>
+          <div className="exam-list">
+            {selectedTab === "unfinished" ? (
+              <button
+                className="exam-add-card"
+                type="button"
+                aria-label="添加考试安排"
+                title="添加考试安排"
+                onClick={() => setEditing(null)}
               >
-                <div className="cluster spread gap-12">
-                  <div className="min-w-0">
-                    <p className="muted text-sm">
-                      {exam.date ? formatDate(exam.date) : "日期待定"}
-                    </p>
-                    <h2>{exam.course_name}</h2>
-                  </div>
-                  <span className={`badge ${exam.customize_id > 0 ? "badge--brand" : ""}`}>
-                    {exam.customize_id > 0 ? "自定义" : "教务"}
-                  </span>
-                </div>
-                <p className="cluster gap-4">
-                  <MapPin aria-hidden="true" />
-                  {exam.area || "校区待定"} · {exam.classroom || "考场待定"}
-                </p>
-                <p className="muted text-sm">
-                  时间 {exam.start_time || "待定"}–{exam.end_time || "待定"} · 座位{" "}
-                  {exam.seat || "待定"}
-                </p>
-                <p className="muted text-sm">课程号 {exam.course_id || "自定义考试"}</p>
-                {exam.customize_id > 0 ? (
-                  <div className="cluster gap-8">
-                    <button
-                      className="button button--ghost button--small"
-                      type="button"
-                      onClick={() => setEditing(exam)}
-                    >
-                      <Pencil aria-hidden="true" />
-                      编辑
-                    </button>
-                    <button
-                      className="button button--ghost button--small text-danger"
-                      type="button"
-                      onClick={() => setDeleting(exam)}
-                    >
-                      <Trash2 aria-hidden="true" />
-                      删除
-                    </button>
-                  </div>
-                ) : null}
-              </article>
-            ))}
+                <Plus aria-hidden="true" />
+                <span>添加</span>
+              </button>
+            ) : null}
+            {selectedQuery.isPending ? <PageSkeleton rows={5} /> : null}
+            {initialError ? (
+              <PageError error={selectedQuery.error} onRetry={retrySelectedQuery} />
+            ) : null}
+            {!selectedQuery.isPending && !initialError && visibleExams.length
+              ? visibleExams.map((item, index) => (
+                  <ExamCard
+                    item={item}
+                    key={`${item.exam.course_name}-${item.exam.customize_id}-${index}`}
+                    onEdit={() => setEditing(item.exam)}
+                    onDelete={() => setDeleting(item.exam)}
+                  />
+                ))
+              : null}
+            {!selectedQuery.isPending && !initialError && !visibleExams.length ? (
+              <EmptyState
+                title={selectedTab === "unfinished" ? "暂无未结束的考试" : "暂无已结束的考试"}
+                description={
+                  selectedTab === "unfinished"
+                    ? "新的考试安排会显示在这里，也可以自行添加。"
+                    : "已经结束或失效的考试安排会显示在这里。"
+                }
+              />
+            ) : null}
+            {selectedRefetchError ? (
+              <PageError error={selectedQuery.error} onRetry={retrySelectedQuery} />
+            ) : null}
+            {selectedTab === "finished" && endedExams.isFetchNextPageError ? (
+              <PageError error={endedExams.error} onRetry={() => void endedExams.fetchNextPage()} />
+            ) : null}
+            {selectedTab === "finished" &&
+            endedExams.hasNextPage &&
+            !endedExams.isFetchNextPageError ? (
+              <button
+                className="button button--text exam-load-more"
+                type="button"
+                disabled={endedExams.isFetchingNextPage}
+                onClick={() => void endedExams.fetchNextPage()}
+              >
+                <ChevronDown aria-hidden="true" />
+                {endedExams.isFetchingNextPage ? "正在加载…" : "加载更多"}
+              </button>
+            ) : null}
           </div>
-        ) : (
-          <EmptyState
-            title="暂无考试安排"
-            description="新的考试安排会显示在这里，也可以自行添加。"
-          />
-        )}
-      </Section>
+        </Section>
+        <PageFootnotes
+          items={selectedTab === "unfinished" ? unfinishedExamFootnotes : finishedExamFootnotes}
+          label={selectedTab === "unfinished" ? "未结束考试安排说明" : "已结束考试安排说明"}
+        />
+      </div>
 
       {editing !== undefined ? (
         <ExamEditor
@@ -258,7 +433,7 @@ export default function ExamsPage() {
           pending={remove.isPending}
           error={remove.isError ? remove.error.message : undefined}
           onCancel={() => setDeleting(null)}
-          onConfirm={() => remove.mutate(deleting.customize_id)}
+          onConfirm={() => remove.mutate(deleting.customize_id!)}
         />
       ) : null}
     </div>

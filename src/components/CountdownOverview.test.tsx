@@ -14,7 +14,8 @@ const activeCountdown: CountdownInfo = {
   },
   semester: {
     xn: 2026,
-    xq: "autumn",
+    xq: 1,
+    xq_text: "秋季学期",
     target_date: "2027-01-03",
     weeks: 16,
     status: "active",
@@ -75,6 +76,8 @@ describe("CountdownOverview", () => {
         name: "距离2026 秋季学期开始还有 3 天，9 月 13 日开始，共 16 周",
       }),
     ).toHaveClass("countdown-item--info");
+    expect(screen.queryByText("暂无后续假期")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(1);
 
     rerender(
       <CountdownOverview

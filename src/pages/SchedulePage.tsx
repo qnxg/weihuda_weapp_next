@@ -1,10 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarSync, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../api/api";
-import type { Course, CustomCourseRequest, TableSetting } from "../api/types";
+import type { Course, CustomCourseRequest, ExtraCourse, TableSetting } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { PageFootnotes } from "../components/PageFootnotes";
 import {
   SemesterPickerDialog,
   semesterOptionLabel,
@@ -24,21 +33,22 @@ import {
   StatusMessage,
 } from "../components/ui";
 import {
+  buildCourseColorMap,
   coursePeriods,
   courseSessionKey,
   courseSessionPeriodLabel,
   courseSessionTimes,
   groupCourseSessions,
-  type CourseSession,
+  stackCourseSessions,
+  type CourseSessionStack,
 } from "../utils/course";
+import { currentWeekday, dateForSemesterDay, getCurrentWeek, weekdays } from "../utils/format";
 import {
-  currentWeekday,
-  dateForSemesterDay,
-  getCurrentWeek,
-  termName,
-  weekdays,
-} from "../utils/format";
-import { isGradeTerm } from "../utils/semester";
+  findCurrentSemester,
+  findSemester,
+  parseAcademicYear,
+  parseSemesterId,
+} from "../utils/semester";
 
 const scheduleDays = [
   { day: 0, label: "周日" },
@@ -53,6 +63,18 @@ const scheduleDays = [
 const schedulePeriods = Object.entries(coursePeriods)
   .map(([period, times]) => ({ period: Number(period), ...times }))
   .toSorted((left, right) => left.period - right.period);
+
+const COURSE_CELL_COLOR_COUNT = 10;
+const WEEK_SWIPE_MIN_DISTANCE = 48;
+const WEEK_SWIPE_AXIS_RATIO = 1.25;
+const schedulePageFootnotes = [
+  "对于本科生，数据来源于教务系统。对于研究生，数据来源于研究生系统。未登录时的数据来自于登录时最后一次获得的数据。",
+  "点击课表格子或是无课表课程项可查看课程详情信息。",
+  "为提升用户体验，湖大微生活会对课表数据进行缓存，课表数据可能未及时更新，你可以通过反复下拉刷新来获取最新数据。",
+  "无课表课程指的是没有在学校系统上写明上课时间的课程，这些课程的上课信息需要通过其他途径获得。",
+  "彩色格子表示本周上课，灰色格子表示本周不上课，右下角有叠角图标的格子表示该时间段还存在其他非本周课程，格子的左下角如果出现“+N”标识则表示该时间段需要同时上多个课。",
+  "如果想要隐藏非本周的课程（灰色格子），可以前往“我的” > “设置” > “课表设置”中开启“仅显示本周课程”。",
+] as const;
 
 function formatCalendarDate(date: Date | null) {
   return date ? `${date.getMonth() + 1}/${date.getDate()}` : "—";
@@ -143,15 +165,6 @@ function formatWeekRanges(weeks: readonly number[]) {
     ranges.push(rangeStart === rangeEnd ? String(rangeStart) : `${rangeStart}-${rangeEnd}`);
   }
   return ranges.length ? `第 ${ranges.join("、")} 周` : "周次待定";
-}
-
-function courseTone(course: Course) {
-  const identity = course.course_id || course.course_name;
-  let hash = 0;
-  for (const character of identity) {
-    hash = (hash * 31 + (character.codePointAt(0) || 0)) | 0;
-  }
-  return (hash >>> 0) % 6;
 }
 
 function parseNumberList(value: FormDataEntryValue | null) {
@@ -284,86 +297,79 @@ function CourseEditor({
 }
 
 function CourseDetails({
-  session,
+  stack,
+  courseColorMap,
   selectedWeek,
   onEdit,
   onDelete,
   onClose,
 }: {
-  session: CourseSession;
+  stack: CourseSessionStack;
+  courseColorMap: ReadonlyMap<string, number>;
   selectedWeek: number;
   onEdit: (course: Course) => void;
   onDelete: (course: Course) => void;
   onClose: () => void;
 }) {
-  const { course } = session;
-  const times = courseSessionTimes(session);
-  const weekday = scheduleDays.find((item) => item.day === course.day)?.label || "日期待定";
-  const active = course.weeks.includes(selectedWeek);
+  const primaryTimes = courseSessionTimes(stack.primary);
+  const primaryWeekday =
+    scheduleDays.find((item) => item.day === stack.primary.course.day)?.label || "日期待定";
 
   return (
     <Modal
-      title={course.course_name}
-      description={`${weekday} · ${courseSessionPeriodLabel(session)}${
-        times ? ` · ${times.start}-${times.end}` : ""
-      }`}
+      title={stack.primary.course.course_name}
+      description={`${primaryWeekday} · ${courseSessionPeriodLabel(stack.primary)}${
+        primaryTimes ? ` · ${primaryTimes.start}-${primaryTimes.end}` : ""
+      }${stack.sessions.length > 1 ? ` · 同一时段共 ${stack.sessions.length} 门课程` : ""}`}
+      variant="course-detail"
+      showClose={false}
       onClose={onClose}
     >
-      {!active ? <p className="schedule-detail__notice">第 {selectedWeek} 周不上这门课</p> : null}
-      <dl className="schedule-detail-list">
-        <div>
-          <dt>地点</dt>
-          <dd>{course.place || "待定"}</dd>
-        </div>
-        <div>
-          <dt>教师</dt>
-          <dd>{course.teacher || "待定"}</dd>
-        </div>
-        <div>
-          <dt>上课周次</dt>
-          <dd>{formatWeekRanges(course.weeks)}</dd>
-        </div>
-        <div>
-          <dt>课程号</dt>
-          <dd>{course.course_id || "自定义课程"}</dd>
-        </div>
-        <div>
-          <dt>班级</dt>
-          <dd>{course.class_name || "未设置"}</dd>
-        </div>
-        <div>
-          <dt>类型与学分</dt>
-          <dd>
-            {course.course_type || "自定义"} · {course.credit ?? "无"} 学分
-          </dd>
-        </div>
-        <div>
-          <dt>校区与人数</dt>
-          <dd>
-            {course.area || "未设置"} · {course.people ?? "未知"} 人
-          </dd>
-        </div>
-        <div>
-          <dt>备注</dt>
-          <dd>{course.extra || "无"}</dd>
-        </div>
-      </dl>
-      {course.customize_id !== null ? (
-        <div className="schedule-detail__actions">
-          <button className="button button--secondary" type="button" onClick={() => onEdit(course)}>
-            <Pencil aria-hidden="true" />
-            编辑课程
-          </button>
-          <button
-            className="button button--ghost text-danger"
-            type="button"
-            onClick={() => onDelete(course)}
+      {stack.sessions.map((session) => {
+        const { course } = session;
+        const active = course.weeks.includes(selectedWeek);
+        const location =
+          course.place && course.area
+            ? `${course.place}（${course.area}）`
+            : course.place || course.area || "地点待定";
+        return (
+          <article
+            className={`schedule-detail-card schedule-course--color-${
+              courseColorMap.get(course.course_name) ?? 0
+            }${active ? "" : " is-inactive"}`}
+            key={courseSessionKey(session)}
+            aria-label={`${course.course_name}，${active ? "本周上课" : `第 ${selectedWeek} 周不上课`}`}
+            tabIndex={stack.sessions.length > 1 ? 0 : undefined}
           >
-            <Trash2 aria-hidden="true" />
-            删除课程
-          </button>
-        </div>
-      ) : null}
+            <header>
+              <p>{course.course_type || "自定义课程"}</p>
+              <p>{course.course_id || "自定义课程"}</p>
+              <h3>{course.course_name}</h3>
+            </header>
+            <div className="schedule-detail-card__facts">
+              <p>{location}</p>
+              <p>{course.class_name || "班级未设置"}</p>
+              <p>{course.teacher || "教师待定"}</p>
+              <p>{formatWeekRanges(course.weeks)}</p>
+              <p>{course.credit === null ? "学分未设置" : `${course.credit} 学分`}</p>
+              <p>上课人数：{course.people ?? "未知"}</p>
+              {course.extra ? <p>备注：{course.extra}</p> : null}
+            </div>
+            {course.customize_id !== null ? (
+              <div className="schedule-detail-card__actions">
+                <button type="button" onClick={() => onEdit(course)}>
+                  <Pencil aria-hidden="true" />
+                  编辑
+                </button>
+                <button type="button" onClick={() => onDelete(course)}>
+                  <Trash2 aria-hidden="true" />
+                  删除
+                </button>
+              </div>
+            ) : null}
+          </article>
+        );
+      })}
     </Modal>
   );
 }
@@ -373,34 +379,43 @@ export default function SchedulePage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [semesterPickerOpen, setSemesterPickerOpen] = useState(false);
-  const [details, setDetails] = useState<CourseSession | null>(null);
+  const [details, setDetails] = useState<CourseSessionStack | null>(null);
+  const [extraDetails, setExtraDetails] = useState<ExtraCourse | null>(null);
   const [editing, setEditing] = useState<Course | null | undefined>();
   const [deleting, setDeleting] = useState<Course | null>(null);
   const [formError, setFormError] = useState("");
+  const weekSwipeStartRef = useRef<{
+    identifier: number;
+    x: number;
+    y: number;
+  } | null>(null);
+  const weekSwipeGuardCleanupRef = useRef<(() => void) | null>(null);
+  const suppressCourseClickUntilRef = useRef(0);
+  useEffect(
+    () => () => {
+      weekSwipeGuardCleanupRef.current?.();
+    },
+    [],
+  );
   const requestedYearValue = searchParams.get("xn");
   const requestedTermValue = searchParams.get("xq");
-  const requestedTerm = isGradeTerm(requestedTermValue) ? requestedTermValue : undefined;
-  const requestedYear = Number(requestedYearValue);
-  const hasRequestedSemester =
-    requestedYearValue !== null &&
-    Number.isInteger(requestedYear) &&
-    requestedYear >= 2000 &&
-    requestedYear <= 2100 &&
-    requestedTerm !== undefined;
+  const requestedYear = parseAcademicYear(requestedYearValue);
+  const requestedTerm = parseSemesterId(requestedTermValue);
 
-  const currentSemester = useQuery({
-    queryKey: ["semester", "current"],
+  const semesterTable = useQuery({
+    queryKey: ["semester"],
     queryFn: () => api.semester.get(),
     enabled: isAuthenticated,
   });
-  const requestedSemester = useQuery({
-    queryKey: ["semester", requestedYear, requestedTerm],
-    queryFn: () => api.semester.get(requestedYear, requestedTerm!),
-    enabled: isAuthenticated && hasRequestedSemester,
-  });
-  const semester = hasRequestedSemester ? requestedSemester : currentSemester;
-  const year = hasRequestedSemester ? requestedYear : currentSemester.data?.xn;
-  const term = hasRequestedSemester ? requestedTerm! : currentSemester.data?.xq;
+  const currentSemester = findCurrentSemester(semesterTable.data);
+  const requestedSemester = findSemester(semesterTable.data, requestedYear, requestedTerm);
+  const semester = requestedSemester ?? currentSemester;
+  const fellBackFromSemesterUrl =
+    semesterTable.data !== undefined &&
+    (requestedYearValue !== null || requestedTermValue !== null) &&
+    requestedSemester === undefined;
+  const year = semester?.xn;
+  const term = semester?.xq;
   const hasSemesterSelection = year !== undefined && term !== undefined;
 
   const courses = useQuery({
@@ -440,18 +455,19 @@ export default function SchedulePage() {
   });
 
   const currentSemesterIsSelected = Boolean(
-    currentSemester.data &&
-    semester.data &&
-    currentSemester.data.xn === semester.data.xn &&
-    currentSemester.data.xq === semester.data.xq,
+    currentSemester &&
+    semester &&
+    currentSemester.xn === semester.xn &&
+    currentSemester.xq === semester.xq,
   );
-  const firstWeek = semester.data?.from_zero ? 0 : 1;
-  const currentWeek = semester.data ? getCurrentWeek(semester.data) : firstWeek;
+  const firstWeek = semester?.from_zero ? 0 : 1;
+  const currentWeek = semester ? getCurrentWeek(semester) : firstWeek;
   const requestedWeek = Number(searchParams.get("week"));
   const selectedWeek =
-    semester.data &&
-    requestedWeek >= (semester.data.from_zero ? 0 : 1) &&
-    requestedWeek <= semester.data.weeks
+    semester &&
+    !fellBackFromSemesterUrl &&
+    requestedWeek >= (semester.from_zero ? 0 : 1) &&
+    requestedWeek <= semester.weeks
       ? requestedWeek
       : currentSemesterIsSelected
         ? currentWeek
@@ -463,21 +479,102 @@ export default function SchedulePage() {
       ? requestedDay
       : currentWeekday();
 
-  const visibleSessions = useMemo(() => {
+  const visibleSessionStacks = useMemo(() => {
     if (!courses.data) return [];
-    return groupCourseSessions(
-      courses.data.filter((course) =>
-        tableSetting.data?.setting.display_not_current_week_courses
-          ? true
-          : course.weeks.includes(selectedWeek),
+    return stackCourseSessions(
+      groupCourseSessions(
+        courses.data.filter((course) =>
+          tableSetting.data?.setting.display_not_current_week_courses
+            ? true
+            : course.weeks.includes(selectedWeek),
+        ),
       ),
+      selectedWeek,
     );
   }, [courses.data, selectedWeek, tableSetting.data]);
+  const courseColorMap = useMemo(
+    () => buildCourseColorMap(courses.data ?? [], COURSE_CELL_COLOR_COUNT),
+    [courses.data],
+  );
 
   function setWeek(week: number) {
     const value = new URLSearchParams(searchParams);
     value.set("week", String(week));
     setSearchParams(value, { replace: true });
+  }
+
+  function moveWeek(offset: -1 | 1) {
+    if (!semester) return;
+    const nextWeek = selectedWeek + offset;
+    if (nextWeek < firstWeek || nextWeek > semester.weeks) return;
+    setWeek(nextWeek);
+  }
+
+  function cancelWeekSwipe() {
+    weekSwipeStartRef.current = null;
+    weekSwipeGuardCleanupRef.current?.();
+    weekSwipeGuardCleanupRef.current = null;
+  }
+
+  function handleWeekSwipeStart(event: ReactTouchEvent<HTMLElement>) {
+    cancelWeekSwipe();
+    if (event.touches.length !== 1) {
+      return;
+    }
+    const calendar = event.currentTarget;
+    if (calendar.scrollWidth - calendar.clientWidth > 1) {
+      return;
+    }
+    const touch = event.touches[0];
+    weekSwipeStartRef.current = {
+      identifier: touch.identifier,
+      x: touch.clientX,
+      y: touch.clientY,
+    };
+    const cancelMultiTouchSwipe = (touchEvent: TouchEvent) => {
+      if (touchEvent.touches.length > 1) cancelWeekSwipe();
+    };
+    document.addEventListener("touchstart", cancelMultiTouchSwipe, {
+      capture: true,
+      passive: true,
+    });
+    document.addEventListener("touchmove", cancelMultiTouchSwipe, {
+      capture: true,
+      passive: true,
+    });
+    weekSwipeGuardCleanupRef.current = () => {
+      document.removeEventListener("touchstart", cancelMultiTouchSwipe, true);
+      document.removeEventListener("touchmove", cancelMultiTouchSwipe, true);
+    };
+  }
+
+  function handleWeekSwipeEnd(event: ReactTouchEvent<HTMLElement>) {
+    const start = weekSwipeStartRef.current;
+    cancelWeekSwipe();
+    if (!start || event.touches.length > 0) return;
+
+    let touch: { clientX: number; clientY: number } | null = null;
+    for (let index = 0; index < event.changedTouches.length; index += 1) {
+      const candidate = event.changedTouches[index];
+      if (candidate.identifier === start.identifier) {
+        touch = candidate;
+        break;
+      }
+    }
+    if (!touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (
+      Math.abs(deltaX) < WEEK_SWIPE_MIN_DISTANCE ||
+      Math.abs(deltaX) < Math.abs(deltaY) * WEEK_SWIPE_AXIS_RATIO
+    ) {
+      return;
+    }
+
+    if (event.cancelable) event.preventDefault();
+    suppressCourseClickUntilRef.current = performance.now() + 120;
+    moveWeek(deltaX < 0 ? 1 : -1);
   }
 
   function setSemester(value: string) {
@@ -501,7 +598,7 @@ export default function SchedulePage() {
 
   function chooseSemester(option: SemesterOption) {
     setSemesterPickerOpen(false);
-    if (currentSemester.data?.xn === option.year && currentSemester.data.xq === option.term) {
+    if (currentSemester?.xn === option.year && currentSemester.xq === option.term) {
       returnToCurrentSemester();
       return;
     }
@@ -509,7 +606,7 @@ export default function SchedulePage() {
     setSemester(semesterOptionValue(option));
   }
 
-  const scheduleReady = semester.data !== undefined && courses.data !== undefined;
+  const scheduleReady = semester !== undefined && courses.data !== undefined;
   const isViewingCurrentWeek = currentSemesterIsSelected && selectedWeek === currentWeek;
   const {
     pinned: weekdaysPinned,
@@ -529,11 +626,11 @@ export default function SchedulePage() {
     );
   }
 
-  const corePending = semester.data === undefined && semester.isPending;
+  const corePending = semester === undefined && semesterTable.isPending;
   const coursesPending = courses.data === undefined && courses.isPending;
   const coreFailure =
-    semester.data === undefined && semester.isError
-      ? semester
+    semester === undefined && semesterTable.isError
+      ? semesterTable
       : courses.data === undefined && courses.isError
         ? courses
         : null;
@@ -542,10 +639,10 @@ export default function SchedulePage() {
       <PageHeader
         title="课表"
         description={
-          semester.data ? (
+          semester ? (
             <span className="schedule-header-description">
               <span className="schedule-header-term">
-                {semester.data.xn}-{semester.data.xn + 1} 学年 {termName(semester.data.xq)}
+                {semester.xn}-{semester.xn + 1} 学年 {semester.xq_text}
               </span>
               <span
                 className={`schedule-header-week${weekdaysPinned ? " is-visible" : ""}`}
@@ -574,17 +671,18 @@ export default function SchedulePage() {
               className="icon-button"
               type="button"
               aria-label={
-                semester.data
+                semester
                   ? `切换学期，当前为${semesterOptionLabel({
-                      year: semester.data.xn,
-                      term: semester.data.xq,
+                      year: semester.xn,
+                      term: semester.xq,
+                      text: semester.xq_text,
                     })}`
                   : "切换学期"
               }
               title="切换学期"
               aria-haspopup="dialog"
               aria-expanded={semesterPickerOpen}
-              disabled={!semester.data}
+              disabled={!semester}
               onClick={() => setSemesterPickerOpen(true)}
             >
               <CalendarSync aria-hidden="true" />
@@ -621,7 +719,7 @@ export default function SchedulePage() {
           <section className="schedule-week-heading" aria-label="选择教学周">
             <div className="schedule-week-heading__title" aria-live="polite">
               <h2>第 {selectedWeek} 周</h2>
-              <span>共 {semester.data!.weeks} 周</span>
+              <span>共 {semester!.weeks} 周</span>
             </div>
             <div className="schedule-week-heading__actions">
               <button
@@ -629,7 +727,7 @@ export default function SchedulePage() {
                 type="button"
                 aria-label="上一周"
                 disabled={selectedWeek <= firstWeek}
-                onClick={() => setWeek(selectedWeek - 1)}
+                onClick={() => moveWeek(-1)}
               >
                 <ChevronLeft aria-hidden="true" />
               </button>
@@ -637,8 +735,8 @@ export default function SchedulePage() {
                 className="icon-button"
                 type="button"
                 aria-label="下一周"
-                disabled={selectedWeek >= semester.data!.weeks}
-                onClick={() => setWeek(selectedWeek + 1)}
+                disabled={selectedWeek >= semester!.weeks}
+                onClick={() => moveWeek(1)}
               >
                 <ChevronRight aria-hidden="true" />
               </button>
@@ -649,6 +747,9 @@ export default function SchedulePage() {
             className="schedule-calendar"
             aria-labelledby="schedule-calendar-title"
             tabIndex={0}
+            onTouchStart={handleWeekSwipeStart}
+            onTouchEnd={handleWeekSwipeEnd}
+            onTouchCancel={cancelWeekSwipe}
           >
             <h2 className="sr-only" id="schedule-calendar-title">
               第 {selectedWeek} 周课程表
@@ -663,7 +764,7 @@ export default function SchedulePage() {
                 节次
               </div>
               {scheduleDays.map(({ day, label }, dayIndex) => {
-                const calendarDate = dateForSemesterDay(semester.data!, selectedWeek, day);
+                const calendarDate = dateForSemesterDay(semester!, selectedWeek, day);
                 const isToday = isViewingCurrentWeek && currentWeekday() === day;
                 return (
                   <div
@@ -701,9 +802,18 @@ export default function SchedulePage() {
                   />
                 )),
               )}
-              {visibleSessions.map((session) => {
+              {visibleSessionStacks.map((stack) => {
+                const session = stack.primary;
                 const { course, startPeriod, endPeriod } = session;
                 const active = course.weeks.includes(selectedWeek);
+                const hasCourseStack = stack.sessions.length > 1;
+                const additionalConcurrentCourses = Math.max(
+                  0,
+                  stack.sessions.filter(({ course: stackedCourse }) =>
+                    stackedCourse.weeks.includes(selectedWeek),
+                  ).length - 1,
+                );
+                const hasConflicts = additionalConcurrentCourses > 0;
                 const dayIndex = scheduleDays.findIndex((item) => item.day === course.day);
                 const weekday = scheduleDays[dayIndex]?.label || "日期待定";
                 const times = courseSessionTimes(session);
@@ -716,7 +826,8 @@ export default function SchedulePage() {
                   course.place || "地点待定",
                   course.teacher || "教师待定",
                   active ? null : "非本周",
-                  "查看详情",
+                  hasCourseStack ? `此时段共有 ${stack.sessions.length} 门课程` : null,
+                  hasCourseStack ? "查看该时段全部课程" : "查看详情",
                 ]
                   .filter(Boolean)
                   .join("，");
@@ -724,9 +835,11 @@ export default function SchedulePage() {
                 if (dayIndex < 0) return null;
                 return (
                   <button
-                    className={`schedule-course schedule-course--tone-${courseTone(course)}${
-                      active ? "" : " is-inactive"
-                    }${periodCount === 1 ? " is-single" : ""}`}
+                    className={`schedule-course schedule-course--color-${
+                      courseColorMap.get(course.course_name) ?? 0
+                    }${active ? "" : " is-inactive"}${periodCount === 1 ? " is-single" : ""}${
+                      hasConflicts ? " has-conflicts" : ""
+                    }${hasCourseStack ? " has-course-stack" : ""}`}
                     style={
                       {
                         gridColumn: dayIndex + 2,
@@ -736,10 +849,18 @@ export default function SchedulePage() {
                     type="button"
                     key={courseSessionKey(session)}
                     aria-label={courseLabel}
-                    onClick={() => setDetails(session)}
+                    onClick={() => {
+                      if (performance.now() < suppressCourseClickUntilRef.current) return;
+                      setDetails(stack);
+                    }}
                   >
                     <span className="schedule-course__name">{course.course_name}</span>
                     <span className="schedule-course__place">@{course.place || "待定"}</span>
+                    {hasConflicts ? (
+                      <span className="schedule-course__conflict-count" aria-hidden="true">
+                        +{additionalConcurrentCourses}
+                      </span>
+                    ) : null}
                     {!active ? <span className="schedule-course__inactive">非本周</span> : null}
                   </button>
                 );
@@ -747,7 +868,7 @@ export default function SchedulePage() {
             </div>
           </section>
 
-          {!visibleSessions.length ? (
+          {!visibleSessionStacks.length ? (
             <EmptyState
               title="本周没有课程"
               description="切换教学周或添加自定义课程。"
@@ -765,47 +886,53 @@ export default function SchedulePage() {
         </>
       ) : null}
 
-      <Section
-        title="未排入课表"
-        description={extra.data ? `${extra.data.length} 门课程没有具体上课时间` : undefined}
-      >
-        <QueryState query={extra} loadingRows={3}>
-          {(items) =>
-            items.length ? (
-              <div className="surface list">
-                {items.map((course) => (
-                  <article className="record-item" key={course.course_id}>
-                    <h3>{course.course_name}</h3>
-                    <p className="muted text-sm">
-                      {course.course_id} · {course.class_name} · {course.course_type} ·{" "}
-                      {course.credit} 学分
-                    </p>
-                    <p className="muted text-sm">
-                      {course.area} · {course.teacher} · {course.people} 人 ·{" "}
-                      {course.extra || "无备注"}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <EmptyState title="没有待排课程" description="所有课程都已经排入周课表。" />
-            )
-          }
-        </QueryState>
-      </Section>
+      {extra.data?.length === 0 && !extra.isError ? null : (
+        <Section
+          title="无课表课程"
+          description={extra.data?.length ? `共 ${extra.data.length} 门课程` : undefined}
+          className="schedule-extra-courses"
+        >
+          <QueryState query={extra} loadingRows={3}>
+            {(items) =>
+              items.length ? (
+                <ul className="surface list" aria-label="无课表课程列表">
+                  {items.map((course) => (
+                    <li className="schedule-extra-course-item" key={course.course_id}>
+                      <button
+                        className="record-item schedule-extra-course"
+                        type="button"
+                        aria-label={`${course.course_name}，${course.course_type}，${course.area}，${course.teacher}，查看课程详情`}
+                        onClick={() => setExtraDetails(course)}
+                      >
+                        <span className="schedule-extra-course__title">{course.course_name}</span>
+                        <span className="schedule-extra-course__meta">
+                          {course.course_type} · {course.area} · {course.teacher}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null
+            }
+          </QueryState>
+        </Section>
+      )}
+
+      <PageFootnotes items={schedulePageFootnotes} label="课表说明" />
 
       {scheduleReady && semesterPickerOpen ? (
         <SemesterPickerDialog
-          selected={{ year: year!, term: term! }}
-          selectedSemester={semester.data}
-          current={currentSemester.data}
+          selected={{ year: year!, term: term!, text: semester!.xq_text }}
+          semesters={semesterTable.data!.items}
+          current={currentSemester}
           onSelect={chooseSemester}
           onClose={() => setSemesterPickerOpen(false)}
         />
       ) : null}
       {scheduleReady && details ? (
         <CourseDetails
-          session={details}
+          stack={details}
+          courseColorMap={courseColorMap}
           selectedWeek={selectedWeek}
           onEdit={(course) => {
             setDetails(null);
@@ -817,6 +944,36 @@ export default function SchedulePage() {
           }}
           onClose={() => setDetails(null)}
         />
+      ) : null}
+      {extraDetails ? (
+        <Modal
+          title={extraDetails.course_name}
+          bodyLabel="课程详细信息"
+          onClose={() => setExtraDetails(null)}
+        >
+          <dl className="list schedule-extra-detail">
+            {[
+              { label: "课程类型", value: extraDetails.course_type },
+              { label: "课程号", value: extraDetails.course_id },
+              { label: "班级", value: extraDetails.class_name },
+              { label: "校区", value: extraDetails.area },
+              { label: "教师", value: extraDetails.teacher },
+              { label: "学分", value: `${extraDetails.credit} 学分` },
+              { label: "人数", value: `${extraDetails.people} 人` },
+              ...(extraDetails.extra
+                ? [{ label: "备注", value: extraDetails.extra, wide: true }]
+                : []),
+            ].map(({ label, value, wide }) => (
+              <div
+                className={`data-row${wide ? " schedule-extra-detail__row--wide" : ""}`}
+                key={label}
+              >
+                <dt className="data-row__label">{label}</dt>
+                <dd className="data-row__value">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Modal>
       ) : null}
       {scheduleReady && editing !== undefined ? (
         <CourseEditor

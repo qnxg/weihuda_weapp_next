@@ -1,9 +1,52 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { AuthPrompt, EmptyState, Modal, PageError, PageHeader, QueryState } from "./ui";
+import {
+  AuthPrompt,
+  EmptyState,
+  Modal,
+  PageError,
+  PageHeader,
+  QueryState,
+  RadioGroup,
+  Tag,
+} from "./ui";
 
 describe("shared page states", () => {
+  it("renders shared semantic tags with a tone", () => {
+    render(
+      <ul>
+        <Tag as="li" tone="primary">
+          必修
+        </Tag>
+      </ul>,
+    );
+    const tag = screen.getByRole("listitem");
+    expect(tag).toHaveTextContent("必修");
+    expect(tag).toHaveClass("badge", "badge--brand");
+  });
+
+  it("renders a controlled shared radio group", () => {
+    const onChange = vi.fn();
+    render(
+      <RadioGroup
+        label="性别"
+        value="male"
+        options={[
+          { value: "male", label: "男生" },
+          { value: "female", label: "女生" },
+        ]}
+        onChange={onChange}
+      />,
+    );
+
+    const group = screen.getByRole("radiogroup", { name: "性别" });
+    expect(group).toHaveClass("radio-group-row");
+    expect(screen.getByRole("radio", { name: "男生" })).toBeChecked();
+    fireEvent.click(screen.getByRole("radio", { name: "女生" }));
+    expect(onChange).toHaveBeenCalledWith("female");
+  });
+
   it("provides a clear login action for protected content", () => {
     render(
       <MemoryRouter initialEntries={["/schedule?week=2"]}>
@@ -118,8 +161,32 @@ describe("shared page states", () => {
     );
     const header = screen.getByRole("banner");
     const noticeLink = screen.getByRole("link", { name: "3 条未读通知" });
+    expect(header.children).toHaveLength(1);
     expect(header.firstElementChild?.firstElementChild).toBe(noticeLink);
     expect(screen.getByText("第 2 周").tagName).toBe("STRONG");
+  });
+
+  it("marks the page header as elevated only after the content starts scrolling", () => {
+    render(
+      <MemoryRouter>
+        <main id="main-content">
+          <PageHeader title="课表" />
+          <div>页面内容</div>
+        </main>
+      </MemoryRouter>,
+    );
+
+    const main = screen.getByRole("main");
+    const header = screen.getByRole("banner");
+    expect(header).not.toHaveClass("is-scrolled");
+
+    main.scrollTop = 1;
+    fireEvent.scroll(main);
+    expect(header).toHaveClass("is-scrolled");
+
+    main.scrollTop = 0;
+    fireEvent.scroll(main);
+    expect(header).not.toHaveClass("is-scrolled");
   });
 
   it("keeps modal chrome separate from scrollable content and closes from the backdrop", () => {
@@ -131,14 +198,16 @@ describe("shared page states", () => {
     };
     const onClose = vi.fn();
     render(
-      <Modal title="选择内容" onClose={onClose}>
+      <Modal title="选择内容" bodyLabel="可滚动内容" onClose={onClose}>
         <p>弹窗正文</p>
       </Modal>,
     );
 
     const dialog = screen.getByRole("dialog", { name: "选择内容" });
     expect(dialog.querySelector(":scope > .modal__header")).toBeVisible();
-    expect(dialog.querySelector(":scope > .modal__body")).toHaveTextContent("弹窗正文");
+    const body = screen.getByRole("region", { name: "可滚动内容" });
+    expect(body).toHaveTextContent("弹窗正文");
+    expect(body).toHaveAttribute("tabindex", "0");
     vi.spyOn(dialog, "getBoundingClientRect").mockReturnValue({
       bottom: 600,
       height: 400,
@@ -151,6 +220,33 @@ describe("shared page states", () => {
       toJSON: () => ({}),
     });
     fireEvent.click(dialog, { clientX: 20, clientY: 20 });
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("closes course details from transparent carousel space without closing from a card", () => {
+    HTMLDialogElement.prototype.showModal = function showModal() {
+      this.open = true;
+    };
+    HTMLDialogElement.prototype.close = function close() {
+      this.open = false;
+    };
+    const onClose = vi.fn();
+    render(
+      <Modal title="课程详情" variant="course-detail" onClose={onClose}>
+        <article className="schedule-detail-card">课程内容</article>
+      </Modal>,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "课程详情" });
+    const card = dialog.querySelector<HTMLElement>(".schedule-detail-card");
+    const body = dialog.querySelector<HTMLElement>(".modal__body");
+    expect(card).not.toBeNull();
+    expect(body).not.toBeNull();
+
+    fireEvent.click(card!);
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(body!);
     expect(onClose).toHaveBeenCalledOnce();
   });
 });

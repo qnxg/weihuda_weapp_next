@@ -24,11 +24,16 @@ const RankPage = lazy(() => import("../pages/services/RankPage"));
 const PointsPage = lazy(() => import("../pages/services/PointsPage"));
 const DormPage = lazy(() => import("../pages/services/DormPage"));
 const NetworkPage = lazy(() => import("../pages/services/NetworkPage"));
+const NetworkOrdersPage = lazy(() => import("../pages/services/NetworkOrdersPage"));
+const NetworkDetailPage = lazy(() => import("../pages/services/NetworkDetailPage"));
 const ExamsPage = lazy(() => import("../pages/services/ExamsPage"));
-const GymPage = lazy(() => import("../pages/services/GymPage"));
-const LabPage = lazy(() => import("../pages/services/LabPage"));
+const GymGradePage = lazy(() => import("../pages/services/GymGradePage"));
+const GymAppointmentPage = lazy(() => import("../pages/services/GymAppointmentPage"));
+const GymStandardPage = lazy(() => import("../pages/services/GymStandardPage"));
+const LabSchedulePage = lazy(() => import("../pages/services/LabSchedulePage"));
+const LabGradePage = lazy(() => import("../pages/services/LabGradePage"));
 const RoomsPage = lazy(() => import("../pages/services/RoomsPage"));
-const AnnouncementsPage = lazy(() => import("../pages/services/AnnouncementsPage"));
+const AcademicCalendarPage = lazy(() => import("../pages/services/AcademicCalendarPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -159,6 +164,22 @@ export default function App() {
                     }
                   />
                   <Route
+                    path="services/network/orders"
+                    element={
+                      <Protected>
+                        <NetworkOrdersPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/network/details"
+                    element={
+                      <Protected>
+                        <NetworkDetailPage />
+                      </Protected>
+                    }
+                  />
+                  <Route
                     path="services/exams"
                     element={
                       <Protected>
@@ -167,18 +188,35 @@ export default function App() {
                     }
                   />
                   <Route
-                    path="services/gym"
+                    path="services/gym/grade"
                     element={
                       <Protected>
-                        <GymPage />
+                        <GymGradePage />
                       </Protected>
                     }
                   />
                   <Route
-                    path="services/lab"
+                    path="services/gym/appointment"
                     element={
                       <Protected>
-                        <LabPage />
+                        <GymAppointmentPage />
+                      </Protected>
+                    }
+                  />
+                  <Route path="services/gym/standard" element={<GymStandardPage />} />
+                  <Route
+                    path="services/lab/schedule"
+                    element={
+                      <Protected>
+                        <LabSchedulePage />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="services/lab/grade"
+                    element={
+                      <Protected>
+                        <LabGradePage />
                       </Protected>
                     }
                   />
@@ -190,14 +228,7 @@ export default function App() {
                       </Protected>
                     }
                   />
-                  <Route
-                    path="services/announcements"
-                    element={
-                      <Protected>
-                        <AnnouncementsPage />
-                      </Protected>
-                    }
-                  />
+                  <Route path="services/calendar" element={<AcademicCalendarPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>

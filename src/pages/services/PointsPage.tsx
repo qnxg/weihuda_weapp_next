@@ -78,23 +78,21 @@ export default function PointsPage() {
 
   return (
     <div className="page">
-      <PageHeader
-        title="积分中心"
-        description={description.data?.description}
-        back
-        action={
-          description.isError ? (
-            <button
-              className="icon-button"
-              type="button"
-              aria-label="重新加载积分说明"
-              onClick={() => void description.refetch()}
-            >
-              <RotateCcw aria-hidden="true" />
-            </button>
-          ) : null
-        }
-      />
+      <PageHeader title="积分中心" description={description.data?.description} back />
+
+      {description.isError ? (
+        <StatusMessage tone="danger">
+          <span className="flex-1">积分说明加载失败。</span>
+          <button
+            className="button button--text button--small"
+            type="button"
+            onClick={() => void description.refetch()}
+          >
+            <RotateCcw aria-hidden="true" />
+            重试
+          </button>
+        </StatusMessage>
+      ) : null}
 
       <QueryState query={summary} loadingRows={2}>
         {(points) => (

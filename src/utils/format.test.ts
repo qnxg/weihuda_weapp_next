@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { Semester } from "../api/types";
+import type { SemesterItem } from "../api/types";
 import {
   currentWeekday,
   dateForSemesterDay,
+  daysUntilDate,
   formatDateHeading,
   formatDateTimeWithYear,
+  formatMonthDayWithWeekday,
+  formatDateWithWeekday,
   formatShanghaiDateKey,
+  formatTime,
   getCurrentWeek,
   isDateInSemester,
   parseApiDate,
   periodName,
-  termName,
 } from "./format";
 
 describe("calendar formatting", () => {
@@ -30,23 +33,49 @@ describe("calendar formatting", () => {
     expect(formatDateTimeWithYear("2026-09-23 14:30:00")).toBe("2026年9月23日 14:30");
   });
 
+  it("appends the weekday to an API date without shifting the calendar day", () => {
+    expect(formatDateWithWeekday("2026-10-17")).toBe("2026-10-17 星期六");
+    expect(formatDateWithWeekday("invalid")).toBe("invalid");
+  });
+
+  it("formats compact homepage dates and times without a year", () => {
+    expect(formatMonthDayWithWeekday("2026-09-25")).toBe("9月25日(星期五)");
+    expect(formatMonthDayWithWeekday("2026年9月28日（周一）")).toBe("9月28日(星期一)");
+    expect(formatTime("2026-09-26 14:30")).toBe("14:30");
+  });
+
+  it("calculates local calendar-day distance across supported API date formats", () => {
+    const today = new Date(2026, 8, 23, 23, 30);
+    expect(daysUntilDate("2026-09-23", today)).toBe(0);
+    expect(daysUntilDate("2026-09-25 14:30", today)).toBe(2);
+    expect(daysUntilDate("2026年9月27号（周日）", today)).toBe(4);
+    expect(daysUntilDate("2026年2月30号", today)).toBeNull();
+  });
+
   it("calculates a one-based semester week", () => {
-    expect(
-      getCurrentWeek(
-        { xn: 2026, xq: "autumn", start: "2026-09-13", weeks: 16, from_zero: false },
-        new Date("2026-09-22T12:00:00"),
-      ),
-    ).toBe(2);
+    const semester: SemesterItem = {
+      xn: 2026,
+      xq: 1,
+      xq_text: "秋季学期",
+      start: "2026-09-13",
+      weeks: 16,
+      from_zero: false,
+    };
+    expect(getCurrentWeek(semester, new Date("2025-09-13T12:00:00"))).toBe(1);
+    expect(getCurrentWeek(semester, new Date("2026-09-22T12:00:00"))).toBe(2);
+    expect(getCurrentWeek(semester, new Date("2027-09-13T12:00:00"))).toBe(16);
   });
 
   it("supports zero-based semester numbering and clamps the range", () => {
-    const semester: Semester = {
+    const semester: SemesterItem = {
       xn: 2026,
-      xq: "autumn",
+      xq: 1,
+      xq_text: "秋季学期",
       start: "2026-09-13",
       weeks: 16,
       from_zero: true,
     };
+    expect(getCurrentWeek(semester, new Date("2025-09-13T12:00:00"))).toBe(0);
     expect(getCurrentWeek(semester, new Date("2026-09-13T12:00:00"))).toBe(0);
     expect(getCurrentWeek(semester, new Date("2027-09-13T12:00:00"))).toBe(16);
   });
@@ -56,9 +85,10 @@ describe("calendar formatting", () => {
   });
 
   it("maps API weekdays from the semester start date", () => {
-    const semester: Semester = {
+    const semester: SemesterItem = {
       xn: 2026,
-      xq: "autumn",
+      xq: 1,
+      xq_text: "秋季学期",
       start: "2026-09-13",
       weeks: 16,
       from_zero: false,
@@ -69,9 +99,10 @@ describe("calendar formatting", () => {
   });
 
   it("detects dates outside the teaching weeks", () => {
-    const semester: Semester = {
+    const semester: SemesterItem = {
       xn: 2026,
-      xq: "autumn",
+      xq: 1,
+      xq_text: "秋季学期",
       start: "2026-09-13",
       weeks: 16,
       from_zero: false,
@@ -88,9 +119,7 @@ describe("calendar formatting", () => {
     expect(formatDateHeading(date)).toBe(expected);
   });
 
-  it("formats known and unknown academic labels", () => {
-    expect(termName("autumn")).toBe("秋季学期");
-    expect(termName("custom")).toBe("custom");
+  it("formats period numbers", () => {
     expect(periodName(3)).toBe("第 3 节");
   });
 });

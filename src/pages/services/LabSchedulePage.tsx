@@ -5,15 +5,15 @@ import { api } from "../../api/api";
 import { EmptyState, PageHeader, QueryState, Section, StatusMessage } from "../../components/ui";
 import { formatDateTime, weekdays } from "../../utils/format";
 
-export default function LabPage() {
+export default function LabSchedulePage() {
   const [bindMessage, setBindMessage] = useState("");
-  const schedule = useQuery({ queryKey: ["lab", "schedule"], queryFn: api.lab.schedule });
-  const grade = useQuery({
-    queryKey: ["lab", "grade", 2026, "autumn"],
-    queryFn: () => api.lab.grade(2026, "autumn"),
+  const schedule = useQuery({
+    queryKey: ["lab", "schedule"],
+    queryFn: api.lab.schedule,
   });
   const bind = useMutation({
     mutationFn: api.lab.bind,
+    onMutate: () => setBindMessage(""),
     onSuccess: () => setBindMessage("实验平台账号已绑定。"),
   });
 
@@ -25,17 +25,9 @@ export default function LabPage() {
 
   return (
     <div className="page">
-      <PageHeader
-        title="大物实验"
-        description={
-          grade.data
-            ? `${grade.data.course_name} · 总评 ${grade.data.course_score ?? "待发布"}`
-            : undefined
-        }
-        back
-      />
+      <PageHeader title="实验安排" back />
 
-      <Section title="实验安排">
+      <Section title="安排列表">
         <QueryState query={schedule} loadingRows={4}>
           {(items) =>
             items.length ? (
@@ -89,34 +81,6 @@ export default function LabPage() {
                 description="新的实验排期会显示在这里。"
                 icon={FlaskConical}
               />
-            )
-          }
-        </QueryState>
-      </Section>
-
-      <Section title="实验成绩">
-        <QueryState query={grade} loadingRows={3}>
-          {(result) =>
-            result.labs.length ? (
-              <div className="surface list">
-                {result.labs.map((lab) => (
-                  <article className="record-item stack gap-8" key={lab.lab_name}>
-                    <div className="cluster spread gap-12">
-                      <h3>{lab.lab_name}</h3>
-                      <strong>{lab.score}</strong>
-                    </div>
-                    <p className="muted text-sm">出勤：{lab.attendance || "未记录"}</p>
-                    {lab.details.map((detail) => (
-                      <div className="cluster spread text-sm" key={detail.name}>
-                        <span>{detail.name}</span>
-                        <strong>{detail.score ?? "待发布"}</strong>
-                      </div>
-                    ))}
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <EmptyState title="暂无实验成绩" description="成绩发布后会显示评分组成。" />
             )
           }
         </QueryState>

@@ -27,6 +27,8 @@ const errorMessages: Record<string, string> = {
   SETTING_NOT_FOUND: "未找到这项设置。",
   SETTING_CONTENT_INVALID: "设置内容不符合要求，请检查后重试。",
   NOTICE_NOT_FOUND: "通知不存在或已被删除。",
+  BUILDING_NOT_FOUND: "教学楼不存在，列表可能已更新。",
+  CALENDAR_NOT_FOUND: "校历不存在，列表可能已更新。",
   DORM_NOT_FOUND: "未找到宿舍信息，请核对学籍信息。",
   LAB_LOGIN_FAILED: "实验平台账号或密码不正确。",
   LAB_UNAUTHORIZED: "实验平台绑定已失效，请重新绑定。",
