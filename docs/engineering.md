@@ -87,7 +87,7 @@ Mock 的月度与单日流量明细均固定返回基础协议、视频服务、
 
 `StandardRow.kind` 区分 `standard` 与 `bonus`，可选 `category` 承载 BMI 的“正常、低体重、超重、肥胖”分类，使两个 80 分行拥有独立身份和阈值。其他标准行直接展示原表分值和绝对阈值；耐力跑与力量项目的十条附加分行在数据模块中保存各性别、年级组换算后的绝对时间或次数门槛。页面按 `kind` 拆分数据：标准行进入三列表格；附加分行按既有 `+10` 至 `+1` 顺序切成两个 5 条数组，在同一 `tabpanel` 内进入并列的两张独立两列表格，并以不同 caption 区分前 5 档和后 5 档。附加分表格把每张卡片的外侧单元格 padding 固定为 `14px`，与标准分表格对齐，并相应收紧中线侧 padding 以维持窄屏可用列宽。数据测试校验项目 ID、权重合计、标准分序列、BMI 分类、附加分序列、双年级绝对阈值和关键边界值。
 
-实验安排与实验成绩使用独立懒加载路由。`/services/lab/schedule` 只挂载 `["lab", "schedule"]` 并消费 `GET /lab/schedule`，账号绑定表单通过 `POST /lab/bind` 保留在同页；`/services/lab/grade` 复用 `["semester"]` 确定服务端当前学期，再挂载 `["lab", "grade", xn, xq]` 并消费 `GET /lab/grade`。任一实验页面加载或下拉刷新都不会触发另一页面的业务 Query。
+实验安排与实验成绩使用独立懒加载路由。`/services/lab/schedule` 只挂载 `["lab", "schedule"]` 并消费 `GET /lab/schedule`，账号绑定表单通过 `POST /lab/bind` 保留在同页；`/services/lab/grade` 复用共享 `["semester"]` Query 与 `SemesterPicker`，以 `now_xn/now_xq` 作为无参数 URL 的默认学期，历史选择将整数 `xn/xq` 写入 URL，再挂载 `["lab", "grade", xn, xq]` 并消费 `GET /lab/grade`。`course_name/course_score` 在课程总评纸片中展示，`labs[]` 按接口顺序形成可点击列表并使用 `details.length` 生成评分项数量；详情弹窗只消费当前选择项缓存的 `details`，不新增请求。`null`、空列表和空评分组成分别使用明确的空状态，缺失总评、单项分数和出勤时显示“待发布”或“出勤未记录”。任一实验页面加载或下拉刷新都不会触发另一页面的业务 Query。
 
 匿名首页保持与登录态相同的页面骨架，但所有受保护 Query 均通过 `enabled: false` 保持静默。日期、学期周次和倒计时直接展示，其余区域在原位置渲染 `AuthPrompt`；课程日期复用登录态的 `CourseDayTabs` 交互，仅在本地切换门禁文案，不触发课表或校园网请求。公开请求使用局部加载或降级文案，不阻塞其他匿名内容。
 

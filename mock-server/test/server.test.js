@@ -927,6 +927,38 @@ test("uses SemesterItem integer IDs across semester-scoped endpoints", async () 
   assert.equal(integerSemester.status, 200);
 });
 
+test("returns distinct lab grade layouts for current and historical semesters", async () => {
+  const current = await (
+    await fetch(`${baseUrl}/lab/grade?xn=2026&xq=1`, { headers: authHeaders })
+  ).json();
+  const historical = await (
+    await fetch(`${baseUrl}/lab/grade?xn=2025&xq=3`, { headers: authHeaders })
+  ).json();
+
+  assert.equal(current.data.course_name, "大学物理实验");
+  assert.equal(current.data.course_score, "92");
+  assert.equal(current.data.labs.length, 3);
+  assert.deepEqual(
+    current.data.labs.map((lab) => ({
+      attendance: lab.attendance,
+      detailCount: lab.details.length,
+    })),
+    [
+      { attendance: "正常", detailCount: 2 },
+      { attendance: "迟到", detailCount: 2 },
+      { attendance: null, detailCount: 0 },
+    ],
+  );
+  assert.equal(current.data.labs[1].details[1].score, null);
+
+  assert.equal(historical.data.course_name, "电子电路实验");
+  assert.equal(historical.data.course_score, "86");
+  assert.deepEqual(
+    historical.data.labs.map((lab) => lab.attendance),
+    ["正常", "请假"],
+  );
+});
+
 test("supports a stateful settings update", async () => {
   const value = { version: 2, setting: { display_not_current_week_courses: false } };
   const update = await fetch(`${baseUrl}/me/setting/table`, {
@@ -1048,7 +1080,7 @@ test("supports creating and reading a custom exam", async () => {
     area: "南校区",
     classroom: "综202",
     seat: "8",
-    date: "2026-11-01",
+    date: "2099-11-01",
     start_time: "14:00",
     end_time: "16:00",
   };

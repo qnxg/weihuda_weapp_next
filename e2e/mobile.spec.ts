@@ -2025,9 +2025,45 @@ test("login opens a populated schedule and service pages", async ({ page }, test
 
   await page.goto("/services/lab/grade");
   await expect(page.getByRole("heading", { name: "实验成绩", exact: true })).toBeVisible();
-  await expect(page.locator(".page-header p")).toHaveText("大学物理实验 · 总评 92");
-  await expect(page.getByText("实验报告", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").locator("p")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "2026-2027 学年 秋季学期", exact: true }),
+  ).toBeVisible();
+  const labSummary = page.locator(".lab-course-summary");
+  await expect(labSummary).toContainText("大学物理实验");
+  await expect(labSummary).toContainText("92");
+  await expect(labSummary).toContainText("总评");
+  await expect(page.getByText("出勤 正常", { exact: true })).toBeVisible();
+  await expect(page.getByText("实验报告", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("实验平台密码")).toHaveCount(0);
+  await expectNoHorizontalOverflow(page);
+
+  await page.getByRole("button", { name: "切换学期，当前为2026-2027 秋季学期" }).click();
+  const labSemesterDialog = page.getByRole("dialog", { name: "选择学期" });
+  await expect(
+    labSemesterDialog.getByRole("button", { name: "2026-2027 秋季学期，当前学期" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await labSemesterDialog.getByRole("button", { name: "2025-2026 春季学期" }).click();
+  await expect(page).toHaveURL(/\/services\/lab\/grade\?xn=2025&xq=3$/);
+  await expect(
+    page.getByRole("heading", { name: "2025-2026 学年 春季学期", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("电子电路实验", { exact: true })).toBeVisible();
+  await expect(page.getByText("出勤 请假", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "切换学期，当前为2025-2026 春季学期" }).click();
+  await page
+    .getByRole("dialog", { name: "选择学期" })
+    .getByRole("button", { name: "2026-2027 秋季学期，当前学期" })
+    .click();
+  await expect(page).toHaveURL(/\/services\/lab\/grade$/);
+  await page.getByRole("button", { name: "查看示波器的使用评分组成" }).click();
+  const labDetailDialog = page.getByRole("dialog", { name: "示波器的使用" });
+  await expect(labDetailDialog.getByText("出勤 正常", { exact: true })).toBeVisible();
+  await expect(labDetailDialog.getByText("实验报告", { exact: true })).toBeVisible();
+  await expect(labDetailDialog.getByText("94", { exact: true })).toBeVisible();
+  await labDetailDialog.getByRole("button", { name: "关闭" }).click();
+  await expect(labDetailDialog).toBeHidden();
   await expectNoHorizontalOverflow(page);
   await page.screenshot({
     path: `artifacts/${testInfo.project.name}-lab-grade.png`,

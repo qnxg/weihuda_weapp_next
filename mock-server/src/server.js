@@ -588,19 +588,59 @@ const simpleRoutes = [
       const semester = findSemester(query.get("xn"), query.get("xq"));
       if (!semester) return json({ code: "INVALID_REQUEST" }, 400);
       if (semester.xq === 4) return json(ok(null));
+      if (semester.xq === 1) {
+        return json(
+          ok({
+            course_name: "大学物理实验",
+            course_score: "92",
+            labs: [
+              {
+                lab_name: "示波器的使用",
+                score: "94",
+                attendance: "正常",
+                details: [
+                  { name: "实验报告", score: 94 },
+                  { name: "课堂操作", score: 92 },
+                ],
+              },
+              {
+                lab_name: "用分光计测定三棱镜的折射率",
+                score: "90",
+                attendance: "迟到",
+                details: [
+                  { name: "实验报告", score: 91 },
+                  { name: "课堂操作", score: null },
+                ],
+              },
+              {
+                lab_name: "光的干涉与衍射",
+                score: "88",
+                attendance: null,
+                details: [],
+              },
+            ],
+          }),
+        );
+      }
       return json(
         ok({
-          course_name: "大学物理实验",
-          course_score: "92",
+          course_name: "电子电路实验",
+          course_score: "86",
           labs: [
             {
-              lab_name: "示波器的使用",
-              score: "94",
+              lab_name: "基尔霍夫定律的验证",
+              score: "89",
               attendance: "正常",
               details: [
-                { name: "实验报告", score: 94 },
-                { name: "课堂操作", score: 92 },
+                { name: "实验报告", score: 90 },
+                { name: "课堂操作", score: 88 },
               ],
+            },
+            {
+              lab_name: "运算放大器的应用",
+              score: "83",
+              attendance: "请假",
+              details: [{ name: "实验报告", score: 83 }],
             },
           ],
         }),

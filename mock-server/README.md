@@ -32,7 +32,7 @@ npm run dev
 - 响应头 `X-Mock-Delay` 会返回本次请求实际应用的延迟毫秒数。
 - 除登录、刷新 token、匿名反馈、元数据、倒计时、学期信息和校历外，其余接口要求 `Authorization: Bearer <token>`。
 - 服务允许跨域请求。
-- `GET /semester` 返回完整 `SemesterTable`；`items` 是可见学期目录，`now_xn/now_xq` 指定当前项。课表、成绩、排名、自定义课程、倒计时和实验成绩使用整数 `xq`，并与对应 `SemesterItem.xq` 一致；界面显示名称来自 `SemesterItem.xq_text`，`GET /countdown` 会透传该字段；`GET /lab/grade` 在有效学期没有成绩时可返回 `null`。
+- `GET /semester` 返回完整 `SemesterTable`；`items` 是可见学期目录，`now_xn/now_xq` 指定当前项。课表、成绩、排名、自定义课程、倒计时和实验成绩使用整数 `xq`，并与对应 `SemesterItem.xq` 一致；界面显示名称来自 `SemesterItem.xq_text`，`GET /countdown` 会透传该字段；`GET /lab/grade` 在不同学期返回可区分的课程与实验数据，在有效学期没有成绩时返回 `null`，当前学期 fixture 同时覆盖正常、迟到、缺失出勤、缺失单项分数与空评分组成。
 - `GET /calendar` 公开返回按学年分组的 `xn`、仅含 `id/name` 的阶段目录和 `now_id`；`GET /calendar/{id}` 公开返回对应阶段的 `from/to/name/prev/notes`。Mock 不返回预生成周次或逐日日期，客户端按起止日期生成正式周，并按 `prev.index/name` 生成前置参考周。
 - 设置、自定义课程、自定义考试、反馈、签到、通知已读、楼栋收藏和最近查询状态保存在进程内存中，重启后重置。
 - `GET /img/{id}` 返回一个有效的 PNG 文件。

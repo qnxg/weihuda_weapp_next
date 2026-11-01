@@ -4744,6 +4744,12 @@ a.today-recent-row:active {
   font-size: 12px;
 }
 
+.grade-score strong.grade-score__pending {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
 .notice-item.is-unread {
   border-left: 3px solid var(--brand);
 }
