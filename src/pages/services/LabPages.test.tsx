@@ -147,6 +147,64 @@ describe("lab pages", () => {
     expect(await screen.findByText("实验平台账号已绑定。")).toBeVisible();
   });
 
+  it("renders schedule cards with course, date, venue, teacher and contact actions", async () => {
+    apiMocks.schedule.mockResolvedValue([
+      {
+        seat: "12",
+        name: "示波器的使用",
+        course: "大学物理实验",
+        teacher: "周老师",
+        week: 6,
+        day: 3,
+        date_time: "2026-09-26 14:30",
+        place: "物理实验楼205",
+        phone: "13800000000",
+        email: "teacher@example.edu.cn",
+      },
+      {
+        seat: "",
+        name: "用分光计测定三棱镜的折射率",
+        course: "大学物理实验",
+        teacher: "李老师",
+        week: 7,
+        day: 4,
+        date_time: "2026-10-01 08:00",
+        place: "物理实验楼301",
+        phone: null,
+        email: null,
+      },
+    ]);
+    renderPage(<LabSchedulePage />);
+
+    const card = (
+      await screen.findByRole("heading", { name: /示波器的使用/ })
+    ).closest<HTMLElement>(".lab-schedule-item")!;
+    expect(within(card).queryByText("大学物理实验")).not.toBeInTheDocument();
+    expect(within(card).getByText("实验时间")).toBeVisible();
+    expect(within(card).getByText("实验地点")).toBeVisible();
+    expect(within(card).getByText("授课教师")).toBeVisible();
+    expect(within(card).getByText("9月26日(星期六) 14:30")).toBeVisible();
+    expect(within(card).getByText("物理实验楼205 · 座位 12")).toBeVisible();
+    expect(within(card).getByText("周老师")).toBeVisible();
+    expect(within(card).getByText("(teacher@example.edu.cn)")).toBeVisible();
+    expect(within(card).queryByText("指导教师")).not.toBeInTheDocument();
+    expect(within(card).queryByText(/第 6 周/)).not.toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "电话联系" })).toHaveAttribute(
+      "href",
+      "tel:13800000000",
+    );
+    expect(
+      within(card).getByRole("link", { name: "发送邮件给周老师（teacher@example.edu.cn）" }),
+    ).toHaveAttribute("href", "mailto:teacher@example.edu.cn");
+    expect(within(card).queryByRole("link", { name: "发送邮件" })).not.toBeInTheDocument();
+
+    const noContactCard = screen
+      .getByText("用分光计测定三棱镜的折射率")
+      .closest<HTMLElement>(".lab-schedule-item")!;
+    expect(within(noContactCard).getByText("暂无联系方式")).toBeVisible();
+    expect(within(noContactCard).queryByRole("link")).not.toBeInTheDocument();
+  });
+
   it("loads lab grades, switches semesters, and opens scoring details", async () => {
     const user = userEvent.setup();
     renderPage(<LabGradePage />);

@@ -4650,6 +4650,135 @@ a.today-recent-row:active {
   font-variant-numeric: tabular-nums;
 }
 
+.lab-schedule-list {
+  display: grid;
+  gap: 12px;
+}
+
+.lab-schedule-item {
+  min-width: 0;
+}
+
+.lab-schedule-item__header {
+  padding: 12px 16px;
+  background: var(--brand);
+  color: var(--surface);
+}
+
+.lab-schedule-item__name {
+  min-width: 0;
+  color: inherit;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.lab-schedule-item__rows {
+  display: grid;
+  grid-auto-rows: 1fr;
+}
+
+.lab-schedule-item__row {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+.lab-schedule-item__row + .lab-schedule-item__row {
+  border-top: 1px solid var(--line);
+}
+
+.lab-schedule-item__row > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--brand-dark);
+}
+
+.lab-schedule-item__row-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.lab-schedule-item__row-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.lab-schedule-item__row-value {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.lab-schedule-item__teacher {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 4px;
+  margin-block: -12px;
+  padding-block: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.lab-schedule-item__teacher strong {
+  flex: 0 0 auto;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lab-schedule-item__teacher-channel {
+  min-width: 0;
+  color: var(--brand-plus-1);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lab-schedule-item__teacher:hover .lab-schedule-item__teacher-channel {
+  color: var(--brand-plus-2);
+}
+
+.lab-schedule-item__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.lab-schedule-item__action.button--small {
+  padding-inline: 10px;
+  color: var(--brand-plus-1);
+}
+
+.lab-schedule-item__no-contact {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .grade-row {
   position: relative;
   width: 100%;
