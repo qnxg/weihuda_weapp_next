@@ -18,13 +18,18 @@ import { PageHeader, Section } from "../components/ui";
 
 const groups = [
   {
-    title: "学习",
+    title: "课程与考试",
     items: [
       { id: "grades", title: "课程成绩", meta: "成绩构成、学分与绩点", icon: GraduationCap },
       { id: "rank", title: "成绩排名", meta: "算术、加权与 GPA 排名", icon: Trophy },
       { id: "exams", title: "考试安排", meta: "考场、时间与座位", icon: ClipboardList },
-      { id: "calendar", title: "校历", meta: "学期、假期与教学安排", icon: CalendarRange },
       { id: "rooms", title: "空教室", meta: "按教学楼和日期查询", icon: Building2 },
+      { id: "calendar", title: "校历", meta: "学期、假期与教学安排", icon: CalendarRange },
+    ],
+  },
+  {
+    title: "实验",
+    items: [
       {
         id: "lab/schedule",
         title: "实验安排",
@@ -37,6 +42,11 @@ const groups = [
         meta: "总评、出勤与评分组成",
         icon: ChartNoAxesColumnIncreasing,
       },
+    ],
+  },
+  {
+    title: "体测",
+    items: [
       { id: "gym/grade", title: "体测成绩", meta: "总评、单项与视力", icon: Dumbbell },
       {
         id: "gym/appointment",

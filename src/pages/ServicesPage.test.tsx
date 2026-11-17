@@ -50,4 +50,33 @@ describe("ServicesPage", () => {
     expect(screen.queryByText("权益与支持")).not.toBeInTheDocument();
     expect(screen.queryByText("成长记录")).not.toBeInTheDocument();
   });
+
+  it("groups study services by 课程与考试、实验、体测", () => {
+    render(
+      <MemoryRouter>
+        <ServicesPage />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent),
+    ).toEqual(["课程与考试", "实验", "体测", "校园生活"]);
+
+    const groupOf = (name: RegExp) =>
+      screen.getByRole("link", { name }).closest("section")?.querySelector("h2")?.textContent;
+
+    expect(groupOf(/^课程成绩/)).toBe("课程与考试");
+    expect(groupOf(/^成绩排名/)).toBe("课程与考试");
+    expect(groupOf(/^考试安排/)).toBe("课程与考试");
+    expect(groupOf(/^空教室/)).toBe("课程与考试");
+    expect(groupOf(/^校历/)).toBe("课程与考试");
+    expect(groupOf(/^实验安排/)).toBe("实验");
+    expect(groupOf(/^实验成绩/)).toBe("实验");
+    expect(groupOf(/^体测成绩/)).toBe("体测");
+    expect(groupOf(/^体测预约/)).toBe("体测");
+    expect(groupOf(/^体测标准/)).toBe("体测");
+    expect(groupOf(/^校园卡/)).toBe("校园生活");
+    expect(groupOf(/^宿舍电量/)).toBe("校园生活");
+    expect(groupOf(/^校园网/)).toBe("校园生活");
+  });
 });
