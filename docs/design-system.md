@@ -41,6 +41,35 @@
 
 `#318cca` 与白色小字号的对比度不足，且在白底承载 `11px` 导航文字时对比度不足，因此实色主按钮和底栏选中项使用 `brand +1`；Base 保留给带下划线的文本操作、焦点、图标和进度。Info 直接复用品牌蓝，避免出现两套接近的蓝色。课程卡仅为“即将开始”和“上课中”在右侧显示提示文字，“未开始”和“已结束”不重复显示；全部状态文案仍保留在卡片无障碍名称中。视觉同时使用表面、侧边条和文字强度区分状态。蓝、红、绿、黄仅用于对应语义，不做无语义的装饰性铺色。
 
+## 深色模式
+
+应用跟随系统外观，不提供主题设置、开关或手动覆盖，也不读取 `localStorage`。样式侧依赖 `prefers-color-scheme`：`src/styles/_tokens.scss` 的 `:root` 定义浅色外观，`@media (prefers-color-scheme: dark)` 覆盖同一组语义令牌；页面和组件样式只引用令牌，不写死颜色、白字或投影色。`html` 通过 `color-scheme` 让原生控件、日期选择器、下拉与滚动条跟随外观，`index.html` 以两条 `theme-color` meta 分别声明浅色 `#f5f8fa` 与深色 `#10161b`。
+
+中性色在深色外观下改用带轻微蓝灰的层次，保持“画布 < 内容面 < 弱表面”的原有相对关系：
+
+| 令牌             | 浅色      | 深色      |
+| ---------------- | --------- | --------- |
+| `backdrop`       | `#edf2f5` | `#0a0e12` |
+| `canvas`         | `#f5f8fa` | `#10161b` |
+| `surface`        | `#ffffff` | `#171e24` |
+| `surface-subtle` | `#f2f6f8` | `#1d252c` |
+| `surface-muted`  | `#eaf0f4` | `#232d35` |
+| `skeleton`       | `#e1e8ed` | `#2a343d` |
+| `ink`            | `#1f2b34` | `#e6edf3` |
+| `muted`          | `#64727d` | `#9aa8b3` |
+| `line`           | `#dfe7ec` | `#2b353e` |
+| `line-strong`    | `#becbd4` | `#3d4954` |
+
+色阶继续作为“实色填充”的固定调色板：`brand`、`error`、`info-surface` 以及课程详情彩色卡在两种外观下保持原值，深色下 `brand +1` 提亮为 `#2f6f96` 以保持主按钮在深底上的存在感，`brand-header`（浅色 `brand +1`、深色 `#1b3d53`）专门承载“我的”页的深色标题带与身份区上半部。色阶不能同时充当深色底上的文字，因此文字统一走语义别名：
+
+- `on-brand` / `on-brand-muted` / `on-brand-subtle`：品牌与语义实色表面上的文字、次要文字和弱化数字，两种外观均保持浅色。
+- `brand-text` / `brand-text-strong` / `brand-accent`：内容表面上的品牌文字、强调与图标；深色分别使用 `#8ecdf0`、`#bce0f5`、`#6bb8e6`。
+- `success-text`、`warning-text`、`error-text` 及其 `-strong`、`-accent` 变体：语义文字在深色底上提亮（例如 `error-text` 浅色 `#9c3444`、深色 `#f2a8b1`），对应 `-soft` 背景同步下沉为深色浅底（如 `error-soft` → `#3a1e22`），保证状态文字与浅底同时可读。
+
+课程格子与课程详情卡的十组颜色映射在两种外观下索引一致：`--course-cell-bg-1…10` / `--course-cell-text-1…10` 由 `_tokens.scss` 中的浅色与深色色板分别生成，深色为深底浅字（例如第一组 `#16303f` + `#9ad4f0`），同一课程名称在两个外观下仍是同一色相；课程详情卡继续使用饱和实色配白字，非本周详情卡仍使用中性灰。
+
+深色外观下还需要区分“浅色叠加”与“投影”：`hover-overlay`（白色半透明悬停层改为 `rgb(255 255 255 / 8%)`）、`scrim`（遮罩改为 `rgb(0 0 0 / 64%)`）、`inactive-stripe`（非本周斜纹改为深色）、`stack-corner-shade` / `stack-corner-edge`（课程栈折角）、`sticky-shadow`、`header-shadow-strong`、`course-detail-scrim` 均由令牌切换；`elevation-1…24` 与 `shadow-nav` 在深色下改为更强的纯黑投影，避免内容面与画布失去层次。品牌填充内部的白色半透明装饰（课程详情滚动条与操作按钮）不随外观改变。状态仍必须同时依靠文字和表面表达，不得只用色相深浅区分。
+
 ## 字体
 
 - 中文优先使用 `PingFang SC`、`Microsoft YaHei`，回退到系统无衬线字体。

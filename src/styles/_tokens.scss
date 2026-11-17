@@ -1,3 +1,7 @@
+@use "sass:list";
+
+// 课表格与课程详情卡的配色映射同时维护浅色与深色两套，索引一一对应，
+// 保证同一门课程在两种外观下使用同一个色相。
 $course-cell-background-colors: (
   #e6f4ff,
   #fdebdd,
@@ -24,6 +28,32 @@ $course-cell-text-colors: (
   #796600
 );
 
+$course-cell-dark-background-colors: (
+  #16303f,
+  #3a2418,
+  #11332f,
+  #262a44,
+  #32291a,
+  #3a1f26,
+  #182c45,
+  #3a1b31,
+  #2e1f3d,
+  #2e2f16
+);
+
+$course-cell-dark-text-colors: (
+  #9ad4f0,
+  #f2b489,
+  #8edccd,
+  #bfc2f5,
+  #eccd93,
+  #f5aab8,
+  #a8ccf5,
+  #f5aed9,
+  #dab3f5,
+  #e0d998
+);
+
 $course-detail-background-colors: (
   #1579a6,
   #b95540,
@@ -40,12 +70,16 @@ $course-detail-background-colors: (
 $course-detail-inactive-background: #707070;
 
 :root {
+  color-scheme: light;
+
+  // 品牌与语义色阶：实色填充在两种外观下保持一致，文字使用下方的语义别名。
   --brand-minus-2: #e9f3fc;
   --brand-minus-1: #a7c9e4;
   --brand: #318cca;
   --brand-plus-1: #2d638a;
   --brand-plus-2: #1a415c;
-  --brand-dark: var(--brand-plus-1);
+  --brand-header: #2d638a;
+  --brand-dark: var(--brand-text);
   --brand-soft: var(--brand-minus-2);
   --brand-state: rgb(49 140 202 / 10%);
   --backdrop: #edf2f5;
@@ -78,9 +112,38 @@ $course-detail-inactive-background: #707070;
   --error-soft: var(--error-minus-2);
   --danger: var(--error);
   --danger-soft: var(--error-soft);
-  --info: var(--brand-plus-1);
-  --info-soft: var(--brand-minus-2);
+  --info: var(--brand-text);
+  --info-soft: var(--brand-soft);
   --info-surface: var(--brand);
+
+  // 语义文字：浅色外观直接复用色阶，深色外观换成可读的浅色调。
+  --on-brand: #ffffff;
+  --on-brand-muted: #e9f3fc;
+  --on-brand-subtle: #a7c9e4;
+  --brand-text: #2d638a;
+  --brand-text-strong: #1a415c;
+  --brand-accent: #318cca;
+  --success-text: #276d4c;
+  --success-text-strong: #114830;
+  --success-accent: #408c67;
+  --warning-text: #7f530f;
+  --warning-text-strong: #563500;
+  --warning-accent: #a06f29;
+  --error-text: #9c3444;
+  --error-accent: #c24d5d;
+
+  // 表面叠加与阴影：深色外观下改用浅色叠加和更强的黑色投影。
+  --hover-overlay: rgb(255 255 255 / 56%);
+  --scrim: rgb(20 23 29 / 48%);
+  --inactive-ink: #596874;
+  --inactive-stripe: rgb(255 255 255 / 44%);
+  --stack-corner-shade: rgb(25 30 38 / 14%);
+  --stack-corner-edge: rgb(25 30 38 / 5%);
+  --course-detail-scrim: rgb(20 23 29 / 32%);
+  --sticky-shadow: 0 3px 7px rgb(25 30 38 / 10%);
+  --header-shadow-strong: 0 3px 8px rgb(25 30 38 / 18%), 0 1px 3px rgb(25 30 38 / 10%);
+  --calendar-outside-month: #6a7883;
+
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
@@ -96,4 +159,90 @@ $course-detail-inactive-background: #707070;
   --page-max: 480px;
   --z-nav: 20;
   --z-modal: 40;
+
+  @for $index from 1 through list.length($course-cell-background-colors) {
+    --course-cell-bg-#{$index}: #{list.nth($course-cell-background-colors, $index)};
+    --course-cell-text-#{$index}: #{list.nth($course-cell-text-colors, $index)};
+    --course-detail-bg-#{$index}: #{list.nth($course-detail-background-colors, $index)};
+  }
+
+  --course-detail-inactive-bg: #{$course-detail-inactive-background};
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --brand-minus-2: #17303f;
+    --brand-minus-1: #3f7195;
+    --brand: #318cca;
+    --brand-plus-1: #2f6f96;
+    --brand-plus-2: #245f83;
+    --brand-header: #1b3d53;
+    --brand-state: rgb(107 184 230 / 16%);
+    --backdrop: #0a0e12;
+    --canvas: #10161b;
+    --surface: #171e24;
+    --surface-subtle: #1d252c;
+    --surface-muted: #232d35;
+    --skeleton: #2a343d;
+    --ink: #e6edf3;
+    --muted: #9aa8b3;
+    --line: #2b353e;
+    --line-strong: #3d4954;
+    --success-minus-2: #17342a;
+    --success-minus-1: #356b52;
+    --success: #4faa7f;
+    --success-plus-1: #79cca4;
+    --success-plus-2: #a8e0c4;
+    --warning-minus-2: #3a2c17;
+    --warning-minus-1: #6b5326;
+    --warning: #c08b3e;
+    --warning-plus-1: #e6b978;
+    --warning-plus-2: #f2d3a4;
+    --error-minus-2: #3a1e22;
+    --error-minus-1: #6e3a41;
+    --error: #c24d5d;
+    --error-plus-1: #d4616f;
+    --error-plus-2: #d4707e;
+
+    --on-brand: #ffffff;
+    --on-brand-muted: #dceaf4;
+    --on-brand-subtle: #a8cfe4;
+    --brand-text: #8ecdf0;
+    --brand-text-strong: #bce0f5;
+    --brand-accent: #6bb8e6;
+    --success-text: #79cca4;
+    --success-text-strong: #a8e0c4;
+    --success-accent: #5fbb90;
+    --warning-text: #e6b978;
+    --warning-text-strong: #f2d3a4;
+    --warning-accent: #d09a4c;
+    --error-text: #f2a8b1;
+    --error-accent: #ef8f9b;
+
+    --hover-overlay: rgb(255 255 255 / 8%);
+    --scrim: rgb(0 0 0 / 64%);
+    --inactive-ink: #93a1ac;
+    --inactive-stripe: rgb(0 0 0 / 26%);
+    --stack-corner-shade: rgb(0 0 0 / 34%);
+    --stack-corner-edge: rgb(0 0 0 / 22%);
+    --course-detail-scrim: rgb(0 0 0 / 36%);
+    --sticky-shadow: 0 3px 7px rgb(0 0 0 / 46%);
+    --header-shadow-strong: 0 3px 8px rgb(0 0 0 / 52%), 0 1px 3px rgb(0 0 0 / 32%);
+    --calendar-outside-month: #7d8b96;
+
+    --elevation-1: 0 1px 2px rgb(0 0 0 / 38%), 0 1px 4px rgb(0 0 0 / 26%);
+    --elevation-2: 0 2px 4px rgb(0 0 0 / 42%), 0 2px 8px rgb(0 0 0 / 28%);
+    --elevation-4: 0 4px 8px rgb(0 0 0 / 46%), 0 3px 12px rgb(0 0 0 / 30%);
+    --elevation-8: 0 8px 18px rgb(0 0 0 / 52%), 0 4px 14px rgb(0 0 0 / 34%);
+    --elevation-16: 0 16px 32px rgb(0 0 0 / 58%), 0 6px 18px rgb(0 0 0 / 36%);
+    --elevation-24: 0 24px 48px rgb(0 0 0 / 64%), 0 8px 24px rgb(0 0 0 / 40%);
+    --shadow-nav: 0 -4px 14px rgb(0 0 0 / 44%), 0 -1px 4px rgb(0 0 0 / 32%);
+
+    @for $index from 1 through list.length($course-cell-background-colors) {
+      --course-cell-bg-#{$index}: #{list.nth($course-cell-dark-background-colors, $index)};
+      --course-cell-text-#{$index}: #{list.nth($course-cell-dark-text-colors, $index)};
+    }
+  }
 }

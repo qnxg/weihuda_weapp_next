@@ -4244,3 +4244,63 @@ test("schedule exposes loading and recoverable error states", async ({ page }) =
   await expect(page.getByRole("alert")).toContainText("服务暂时不可用");
   await expect(page.getByRole("button", { name: "重新加载" })).toBeVisible();
 });
+
+test.describe("dark appearance follows the system", () => {
+  test.use({ colorScheme: "dark" });
+
+  test("shell, schedule and course detail keep readable tokens", async ({ page }) => {
+    await page.goto("/");
+    const html = page.locator("html");
+    await expect(html).toHaveCSS("background-color", "rgb(10, 14, 18)");
+    await expect(html).toHaveCSS("color", "rgb(230, 237, 243)");
+    await expect(page.locator(".page-header").first()).toHaveCSS(
+      "background-color",
+      "rgb(16, 22, 27)",
+    );
+    await expect(page.locator(".bottom-nav")).toHaveCSS("background-color", "rgb(23, 30, 36)");
+
+    await page.goto("/login");
+    await page.getByLabel("学号").fill("202208010101");
+    await page.getByLabel("密码").fill("mock-password");
+    await page.getByRole("button", { name: "登录", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: /^\d{1,2} 月 \d{1,2} 日 星期[一二三四五六日]$/ }),
+    ).toBeVisible();
+
+    await page.goto("/schedule");
+    const cell = page.locator(".schedule-course").first();
+    await expect(cell).toBeVisible();
+    const cellColors = await cell.evaluate((element) => {
+      const card = getComputedStyle(element);
+      const name = element.querySelector(".schedule-course__name");
+      return {
+        background: card.backgroundColor,
+        text: name ? getComputedStyle(name).color : card.color,
+      };
+    });
+    expect(contrastRatio(cellColors.text, cellColors.background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("rgb(230, 237, 243)", "rgb(23, 30, 36)")).toBeGreaterThanOrEqual(7);
+
+    await cell.click();
+    const detail = page.locator(".schedule-detail-card").first();
+    await expect(detail).toBeVisible();
+    const detailColors = await detail.evaluate((element) => {
+      const card = getComputedStyle(element);
+      return { background: card.backgroundColor, text: card.color };
+    });
+    expect(contrastRatio(detailColors.text, detailColors.background)).toBeGreaterThanOrEqual(4.5);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+
+    await page.goto("/me");
+    await expect(page.locator(".profile-page .page-header")).toHaveCSS(
+      "background-color",
+      "rgb(27, 61, 83)",
+    );
+    await expect(page.locator(".profile-account-card__student-id")).toHaveCSS(
+      "color",
+      "rgb(168, 207, 228)",
+    );
+    await expectNoHorizontalOverflow(page);
+  });
+});

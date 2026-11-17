@@ -173,11 +173,11 @@ svg {
 }
 
 .pull-to-refresh.is-success .pull-to-refresh__indicator {
-  color: var(--success-plus-1);
+  color: var(--success-text);
 }
 
 .pull-to-refresh.is-error .pull-to-refresh__indicator {
-  color: var(--error-plus-1);
+  color: var(--error-text);
 }
 
 .pull-to-refresh__indicator .is-spinning {
@@ -302,7 +302,7 @@ svg {
   border: 2px solid var(--canvas);
   border-radius: 9px;
   background: var(--error);
-  color: var(--surface);
+  color: var(--on-brand);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -408,7 +408,7 @@ svg {
 .button--primary {
   background: var(--brand-plus-1);
   box-shadow: var(--elevation-2);
-  color: #fff;
+  color: var(--on-brand);
 }
 
 .button--primary:hover {
@@ -444,7 +444,7 @@ svg {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  color: var(--brand);
+  color: var(--brand-accent);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
@@ -453,13 +453,13 @@ svg {
 .button--text:hover {
   background: transparent;
   box-shadow: none;
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .button--danger {
   background: var(--error);
   box-shadow: var(--elevation-2);
-  color: #fff;
+  color: var(--on-brand);
 }
 
 .button--danger:hover:not(:disabled) {
@@ -469,11 +469,11 @@ svg {
 
 .button--secondary.text-danger {
   border-color: var(--error-minus-1);
-  color: var(--error-plus-1);
+  color: var(--error-text);
 }
 
 .button--ghost.text-danger {
-  color: var(--error-plus-1);
+  color: var(--error-text);
 }
 
 .button--secondary.text-danger:hover,
@@ -532,7 +532,7 @@ svg {
 }
 
 .link {
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
   font-weight: 600;
   text-decoration: underline;
   text-decoration-color: var(--brand-minus-1);
@@ -548,7 +548,7 @@ svg {
   transform: translateY(-160%);
   border-radius: var(--radius-sm);
   background: var(--ink);
-  color: #fff;
+  color: var(--canvas);
 }
 
 .skip-link:focus {
@@ -700,17 +700,17 @@ svg {
 
 .status-message--success {
   background: var(--success-soft);
-  color: var(--success-plus-1);
+  color: var(--success-text);
 }
 
 .status-message--warning {
   background: var(--warning-soft);
-  color: var(--warning-plus-1);
+  color: var(--warning-text);
 }
 
 .status-message--danger {
   background: var(--error-soft);
-  color: var(--error-plus-1);
+  color: var(--error-text);
 }
 
 .data-row {
@@ -781,17 +781,17 @@ svg {
 
 .badge--success {
   background: var(--success-soft);
-  color: var(--success-plus-1);
+  color: var(--success-text);
 }
 
 .badge--warning {
   background: var(--warning-soft);
-  color: var(--warning-plus-1);
+  color: var(--warning-text);
 }
 
 .badge--danger {
   background: var(--error-soft);
-  color: var(--error-plus-1);
+  color: var(--error-text);
 }
 
 .form {
@@ -850,12 +850,24 @@ svg {
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: var(--brand);
+  border-color: var(--brand-accent);
   box-shadow: 0 0 0 1px var(--brand);
 }
 
+.field input[type="file"]::file-selector-button {
+  min-height: 32px;
+  margin: -4px 10px -4px -4px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .field-error {
-  color: var(--error-plus-1);
+  color: var(--error-text);
   font-size: 13px;
 }
 
@@ -870,7 +882,7 @@ svg {
 .check-row input {
   width: 20px;
   height: 20px;
-  accent-color: var(--brand);
+  accent-color: var(--brand-accent);
 }
 
 .choice-list {
@@ -959,7 +971,7 @@ svg {
   width: 20px;
   height: 20px;
   margin: 0;
-  accent-color: var(--brand);
+  accent-color: var(--brand-accent);
 }
 
 .segmented {
@@ -995,7 +1007,7 @@ svg {
 
 .segmented .is-active {
   background: transparent;
-  color: var(--brand);
+  color: var(--brand-accent);
   box-shadow: none;
   font-weight: 650;
 }
@@ -1128,7 +1140,7 @@ button.room-filter-row:active {
   height: 18px;
   flex: 0 0 auto;
   margin: 0;
-  accent-color: var(--brand);
+  accent-color: var(--brand-accent);
 }
 
 .radio-group-option span {
@@ -1151,7 +1163,7 @@ button.room-filter-row:active {
 }
 
 .room-filter-field.is-invalid .room-filter-row__label {
-  color: var(--error-plus-1);
+  color: var(--error-text);
 }
 
 .room-filter-row__value {
@@ -1343,7 +1355,7 @@ button.room-filter-row:active {
 
 .room-time-option.is-selected {
   background: var(--surface);
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .room-time-option.is-selected::before {
@@ -1508,7 +1520,7 @@ button.room-filter-row:active {
 .rank-filter-choice.is-selected,
 .rank-filter-choice.is-selected:hover {
   background: var(--brand-soft);
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .rank-filter-choice:disabled {
@@ -1727,7 +1739,7 @@ button.room-filter-row:active {
 .gym-standard-score-part--total > span,
 .gym-standard-score-part--total > strong,
 .gym-standard-score-part--total > strong small {
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .gym-standard-score-operator {
@@ -1825,7 +1837,7 @@ button.room-filter-row:active {
 }
 
 .gym-standard-graduation__factor > strong {
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
   font-size: 16px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -1856,7 +1868,7 @@ button.room-filter-row:active {
 }
 
 .gym-standard-graduation__result strong {
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
   font-size: 15px;
   font-weight: 700;
 }
@@ -1958,7 +1970,7 @@ button.room-filter-row:active {
 
 .gym-standard-projects button.is-active {
   background: transparent;
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .gym-standard-projects button.is-active::after {
@@ -2055,7 +2067,7 @@ button.room-filter-row:active {
 }
 
 .gym-standard-table tbody th {
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -2162,7 +2174,7 @@ button.room-filter-row:active {
 .academic-calendar-picker__option.is-selected,
 .academic-calendar-picker__option.is-selected:hover {
   background: var(--brand-soft);
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .academic-calendar-picker__option > strong {
@@ -2175,8 +2187,6 @@ button.room-filter-row:active {
 }
 
 .academic-calendar-period {
-  --calendar-outside-month: #6a7883;
-
   min-width: 0;
   overflow: hidden;
   border-radius: var(--radius-lg);
@@ -2295,14 +2305,14 @@ button.room-filter-row:active {
 
 .academic-calendar-day.is-today .academic-calendar-day__number {
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
   font-weight: 750;
 }
 
 .academic-calendar-notes {
   padding: 14px 16px 16px;
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
 }
 
 .academic-calendar-notes h3 {
@@ -2564,7 +2574,7 @@ button.room-filter-row:active {
 
 .rank-scope-tab.is-active {
   background: transparent;
-  color: var(--brand);
+  color: var(--brand-accent);
   box-shadow: none;
   font-weight: 680;
 }
@@ -2709,7 +2719,7 @@ button.room-filter-row:active {
 }
 
 .progress-bar {
-  --progress-bar-color: var(--brand);
+  --progress-bar-color: var(--brand-accent);
 
   appearance: none;
   display: block;
@@ -2736,15 +2746,15 @@ button.room-filter-row:active {
 }
 
 .progress-bar--success {
-  --progress-bar-color: var(--success);
+  --progress-bar-color: var(--success-accent);
 }
 
 .progress-bar--warning {
-  --progress-bar-color: var(--warning);
+  --progress-bar-color: var(--warning-accent);
 }
 
 .progress-bar--primary {
-  --progress-bar-color: var(--brand);
+  --progress-bar-color: var(--brand-accent);
 }
 
 .network-overview {
@@ -2829,7 +2839,7 @@ button.room-filter-row:active {
 }
 
 .network-overview__overage {
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
   font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -2880,11 +2890,11 @@ button.room-filter-row:active {
 }
 
 .network-overview__status dd.is-normal {
-  color: var(--success-plus-1);
+  color: var(--success-text);
 }
 
 .network-overview__status dd.is-attention {
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .campus-account-overview__content {
@@ -2925,7 +2935,7 @@ button.room-filter-row:active {
 }
 
 .campus-account-overview__network-state[role="alert"] > svg {
-  color: var(--error);
+  color: var(--error-accent);
 }
 
 .campus-account-overview__network-progress {
@@ -2998,7 +3008,7 @@ a.campus-account-card:active {
 }
 
 .campus-account-card--error > svg {
-  color: var(--error);
+  color: var(--error-accent);
 }
 
 .campus-account-card--error .campus-account-card__copy strong {
@@ -3012,7 +3022,7 @@ a.campus-account-card:active {
   position: absolute;
   top: 0;
   right: 0;
-  color: var(--brand);
+  color: var(--brand-accent);
 }
 
 .campus-account-card__retry svg {
@@ -3046,7 +3056,7 @@ a.campus-account-card:active {
   gap: 8px;
   padding: 8px 12px;
   background: var(--info-surface);
-  color: var(--brand-minus-2);
+  color: var(--on-brand-muted);
 }
 
 .today-announcements__heading > svg {
@@ -3055,7 +3065,7 @@ a.campus-account-card:active {
 }
 
 .today-announcements__heading h2 {
-  color: var(--surface);
+  color: var(--on-brand);
   font-size: 16px;
   font-weight: 650;
 }
@@ -3140,7 +3150,7 @@ a.campus-account-card:active {
 }
 
 .today-announcement__action:focus-visible {
-  outline-color: var(--brand);
+  outline-color: var(--brand-accent);
 }
 
 .today-announcements__loading .skeleton {
@@ -3163,7 +3173,7 @@ a.campus-account-card:active {
 .today-announcements__error > svg {
   width: 18px;
   height: 18px;
-  color: var(--error);
+  color: var(--error-accent);
 }
 
 .today-announcements__error p {
@@ -3172,7 +3182,7 @@ a.campus-account-card:active {
 }
 
 .today-announcements__error .icon-button {
-  color: var(--error);
+  color: var(--error-accent);
 }
 
 .today-announcement-skeleton {
@@ -3308,7 +3318,7 @@ a.today-recent-row:active {
   grid-column: 3;
   grid-row: 1;
   align-self: center;
-  color: var(--brand);
+  color: var(--brand-accent);
 }
 
 .today-recent-list__empty {
@@ -3378,7 +3388,7 @@ a.today-recent-row:active {
 }
 
 .today-grade-card strong {
-  color: var(--brand-deep);
+  color: var(--brand-text);
   font-size: 25px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -3420,13 +3430,13 @@ a.today-recent-row:active {
 .countdown-item--warning {
   --countdown-soft: var(--warning-soft);
   --countdown-border: var(--warning-minus-1);
-  --countdown-color: var(--warning-plus-2);
+  --countdown-color: var(--warning-text-strong);
 }
 
 .countdown-item--success {
   --countdown-soft: var(--success-soft);
   --countdown-border: var(--success-minus-1);
-  --countdown-color: var(--success-plus-2);
+  --countdown-color: var(--success-text-strong);
 }
 
 .countdown-item--info {
@@ -3654,11 +3664,11 @@ a.today-recent-row:active {
 }
 
 .course-card--warning .course-card__status {
-  color: var(--warning-plus-1);
+  color: var(--warning-text);
 }
 
 .course-card--active .course-card__status {
-  color: var(--success-plus-1);
+  color: var(--success-text);
 }
 
 .course-card__meta {
@@ -3813,7 +3823,7 @@ a.today-recent-row:active {
 
 .semester-option.is-selected {
   background: var(--brand-soft);
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .semester-option__copy {
@@ -3843,7 +3853,7 @@ a.today-recent-row:active {
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  color: var(--brand);
+  color: var(--brand-accent);
   font-size: 11px;
   font-weight: 650;
 }
@@ -3881,7 +3891,7 @@ a.today-recent-row:active {
 }
 
 .schedule-page.is-weekdays-pinned .schedule-weekdays {
-  box-shadow: 0 3px 7px rgb(25 30 38 / 10%);
+  box-shadow: var(--sticky-shadow);
 }
 
 .schedule-grid {
@@ -3981,8 +3991,8 @@ a.today-recent-row:active {
 }
 
 .schedule-course {
-  --course-bg: #{list.nth(tokens.$course-cell-background-colors, 1)};
-  --course-text: #{list.nth(tokens.$course-cell-text-colors, 1)};
+  --course-bg: var(--course-cell-bg-1);
+  --course-text: var(--course-cell-text-1);
 
   position: relative;
   z-index: 2;
@@ -4011,12 +4021,12 @@ a.today-recent-row:active {
   border-radius: 8px 0 0;
   background: linear-gradient(
     135deg,
-    rgb(25 30 38 / 14%) 0,
-    rgb(25 30 38 / 14%) 48%,
+    var(--stack-corner-shade) 0,
+    var(--stack-corner-shade) 48%,
     var(--surface-muted) 50%,
     var(--surface-muted) 100%
   );
-  box-shadow: -1px -1px 1px rgb(25 30 38 / 5%);
+  box-shadow: -1px -1px 1px var(--stack-corner-edge);
   content: "";
   pointer-events: none;
 }
@@ -4041,12 +4051,12 @@ a.today-recent-row:active {
 
 @for $index from 1 through list.length(tokens.$course-cell-background-colors) {
   .schedule-course--color-#{$index - 1} {
-    --course-bg: #{list.nth(tokens.$course-cell-background-colors, $index)};
-    --course-text: #{list.nth(tokens.$course-cell-text-colors, $index)};
+    --course-bg: var(--course-cell-bg-#{$index});
+    --course-text: var(--course-cell-text-#{$index});
   }
 
   .schedule-detail-card.schedule-course--color-#{$index - 1} {
-    --course-detail-bg: #{list.nth(tokens.$course-detail-background-colors, $index)};
+    --course-detail-bg: var(--course-detail-bg-#{$index});
   }
 }
 
@@ -4065,14 +4075,14 @@ a.today-recent-row:active {
 
 .schedule-course.is-inactive {
   --course-bg: var(--surface-muted);
-  --course-text: #596874;
+  --course-text: var(--inactive-ink);
 
   background-image: repeating-linear-gradient(
     -45deg,
     transparent 0,
     transparent 8px,
-    rgb(255 255 255 / 44%) 8px,
-    rgb(255 255 255 / 44%) 12px
+    var(--inactive-stripe) 8px,
+    var(--inactive-stripe) 12px
   );
 }
 
@@ -4218,7 +4228,7 @@ a.today-recent-row:active {
 }
 
 .schedule-detail-card {
-  --course-detail-bg: #{list.nth(tokens.$course-detail-background-colors, 1)};
+  --course-detail-bg: var(--course-detail-bg-1);
 
   display: flex;
   height: 100%;
@@ -4232,8 +4242,8 @@ a.today-recent-row:active {
   background-image:
     linear-gradient(var(--course-detail-bg) 30%, transparent),
     linear-gradient(transparent, var(--course-detail-bg) 70%),
-    linear-gradient(rgb(20 23 29 / 32%), transparent),
-    linear-gradient(transparent, rgb(20 23 29 / 32%));
+    linear-gradient(var(--course-detail-scrim), transparent),
+    linear-gradient(transparent, var(--course-detail-scrim));
   background-repeat: no-repeat;
   background-attachment: local, local, scroll, scroll;
   background-position:
@@ -4247,7 +4257,7 @@ a.today-recent-row:active {
     100% 18px,
     100% 18px;
   box-shadow: var(--elevation-8);
-  color: var(--surface);
+  color: var(--on-brand);
   overscroll-behavior-block: contain;
   scroll-snap-align: center;
   scrollbar-color: rgb(255 255 255 / 48%) rgb(255 255 255 / 10%);
@@ -4269,7 +4279,7 @@ a.today-recent-row:active {
 }
 
 .schedule-detail-card.is-inactive {
-  --course-detail-bg: #{tokens.$course-detail-inactive-background};
+  --course-detail-bg: var(--course-detail-inactive-bg);
 }
 
 .schedule-detail-card:focus-visible {
@@ -4384,7 +4394,7 @@ a.today-recent-row:active {
   min-width: 0;
   grid-area: date;
   align-self: center;
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
   font-size: 12px;
   font-weight: 650;
   line-height: 1.4;
@@ -4440,7 +4450,7 @@ a.today-recent-row:active {
 }
 
 .exam-card--active .exam-card__date {
-  color: var(--success-plus-1);
+  color: var(--success-text);
 }
 
 .exam-card--completed .exam-card__date {
@@ -4448,7 +4458,7 @@ a.today-recent-row:active {
 }
 
 .exam-card--invalid .exam-card__date {
-  color: var(--warning-plus-1);
+  color: var(--warning-text);
 }
 
 .exam-card__actions {
@@ -4458,7 +4468,7 @@ a.today-recent-row:active {
   justify-content: flex-end;
   gap: 2px;
   padding: 4px 8px;
-  border-top: 1px solid rgb(31 43 52 / 10%);
+  border-top: 1px solid var(--line);
 }
 
 .exam-card__action {
@@ -4470,7 +4480,7 @@ a.today-recent-row:active {
   padding-inline: 12px;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
   font-size: 13px;
   font-weight: 650;
   cursor: pointer;
@@ -4480,7 +4490,7 @@ a.today-recent-row:active {
 }
 
 .exam-card__action:hover {
-  background: rgb(255 255 255 / 56%);
+  background: var(--hover-overlay);
 }
 
 .exam-card__action:active {
@@ -4497,7 +4507,7 @@ a.today-recent-row:active {
 }
 
 .exam-card__action--danger {
-  color: var(--error-plus-1);
+  color: var(--error-text);
 }
 
 .exam-card__action--danger:hover,
@@ -4521,7 +4531,7 @@ a.today-recent-row:active {
   border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: var(--elevation-1);
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
   font-size: 13px;
   font-weight: 650;
   line-height: 1.2;
@@ -4625,11 +4635,11 @@ a.today-recent-row:active {
 }
 
 .dorm-info-card__action-status.is-success {
-  color: var(--success-plus-1);
+  color: var(--success-text);
 }
 
 .dorm-info-card__action-status.is-error {
-  color: var(--error-plus-1);
+  color: var(--error-text);
 }
 
 .record-item,
@@ -4662,7 +4672,7 @@ a.today-recent-row:active {
 .lab-schedule-item__header {
   padding: 12px 16px;
   background: var(--brand);
-  color: var(--surface);
+  color: var(--on-brand);
 }
 
 .lab-schedule-item__name {
@@ -4748,7 +4758,7 @@ a.today-recent-row:active {
 
 .lab-schedule-item__teacher-channel {
   min-width: 0;
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
   font-size: 12px;
   overflow-wrap: anywhere;
   text-decoration: underline;
@@ -4756,7 +4766,7 @@ a.today-recent-row:active {
 }
 
 .lab-schedule-item__teacher:hover .lab-schedule-item__teacher-channel {
-  color: var(--brand-plus-2);
+  color: var(--brand-text-strong);
 }
 
 .lab-schedule-item__actions {
@@ -4769,7 +4779,7 @@ a.today-recent-row:active {
 
 .lab-schedule-item__action.button--small {
   padding-inline: 10px;
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .lab-schedule-item__no-contact {
@@ -4915,14 +4925,12 @@ a.today-recent-row:active {
 }
 
 .profile-page .page-header {
-  background: var(--brand-plus-1);
-  color: var(--surface);
+  background: var(--brand-header);
+  color: var(--on-brand);
 }
 
 .profile-page .page-header.is-scrolled {
-  box-shadow:
-    0 3px 8px rgb(25 30 38 / 18%),
-    0 1px 3px rgb(25 30 38 / 10%);
+  box-shadow: var(--header-shadow-strong);
 }
 
 .profile-account-card {
@@ -4951,7 +4959,7 @@ a.today-recent-row:active {
 .profile-account-card__top {
   align-items: flex-end;
   padding-bottom: 6px;
-  background: var(--brand-plus-1);
+  background: var(--brand-header);
 }
 
 .profile-account-card__name-block {
@@ -4962,7 +4970,7 @@ a.today-recent-row:active {
 
 .profile-account-card__top h2 {
   min-width: 0;
-  color: var(--surface);
+  color: var(--on-brand);
   font-size: 20px;
   font-weight: 700;
   line-height: 1.35;
@@ -4982,7 +4990,7 @@ a.today-recent-row:active {
 }
 
 .profile-account-card__student-id {
-  color: var(--brand-minus-1);
+  color: var(--on-brand-subtle);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   line-height: 1.35;
@@ -4995,7 +5003,7 @@ a.today-recent-row:active {
   left: 20px;
   width: 72px;
   height: 72px;
-  border: 2px solid var(--surface);
+  border: 2px solid var(--on-brand);
   border-radius: 50%;
   transform: translateY(-50%);
 }
@@ -5005,7 +5013,7 @@ a.today-recent-row:active {
   place-items: center;
   background: var(--brand);
   box-shadow: var(--elevation-1);
-  color: var(--surface);
+  color: var(--on-brand);
   font-size: 24px;
   font-weight: 720;
 }
@@ -5052,7 +5060,7 @@ a.today-recent-row:active {
   place-items: center;
   border-radius: 50%;
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
   font-size: 19px;
   font-weight: 720;
 }
@@ -5099,7 +5107,7 @@ a.today-recent-row:active {
 
 .profile-logout-item > svg:first-child,
 .profile-logout-item strong {
-  color: var(--error-plus-1);
+  color: var(--error-text);
 }
 
 .profile-logout-item > svg:last-child {
@@ -5161,7 +5169,7 @@ a.today-recent-row:active {
 }
 
 .modal::backdrop {
-  background: rgb(20 23 29 / 48%);
+  background: var(--scrim);
   animation: backdrop-enter 160ms ease-out;
 }
 
@@ -5297,7 +5305,7 @@ a.today-recent-row:active {
   place-items: center;
   border-radius: var(--radius-sm);
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
   font-size: 18px;
   font-weight: 750;
 }
@@ -5424,7 +5432,7 @@ a.today-recent-row:active {
 }
 
 .login-shell--login .login-input:focus-within .login-input__icon {
-  color: var(--brand);
+  color: var(--brand-accent);
 }
 
 .building-picker {
@@ -5465,7 +5473,7 @@ a.today-recent-row:active {
 
 .building-option.is-selected {
   background: var(--brand-soft);
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .building-option__select {
@@ -5522,7 +5530,7 @@ a.today-recent-row:active {
 }
 
 .building-option__favorite.is-favorite {
-  color: var(--brand-plus-1);
+  color: var(--brand-text);
 }
 
 .building-option__favorite.is-favorite svg {
